@@ -1,0 +1,17 @@
+{
+  "description": "Split Rohlik shopping cart expenses with your pals",
+  "manifest_version": 2,
+  "name": "Brohlik",
+  "version": "0.1",
+  "homepage_url": "https://github.com/rkraeher/brohlik",
+  "icons": {
+    "48": "icons/croisant-icon-48.png"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://*.rohlik.cz/*"],
+      "js": ["index.js"]
+    }
+  ]
+}
