@@ -1,58 +1,69 @@
-// for selector generation: npx playright codegen url
-const priceStrings = [
-  ...document.querySelectorAll('[data-test="actual-price"]'),
-].map((el) => el.textContent);
+// for selector generation: npx playwright codegen url
 
-const priceRegex = /\d*\.?,?\d+/;
+function getPriceStrings() {
+  return [...document.querySelectorAll('[data-test="actual-price"]')].map(
+    (el) => el.textContent
+  );
+}
 
-const extractedPrices = priceStrings.map((str) => {
-  const match = str.match(priceRegex);
-  return match ? match[0] : null;
-});
+function extractPrices(priceStrings) {
+  const priceRegex = /\d*\.?,?\d+/;
+  return priceStrings.map((str) => {
+    const match = str.match(priceRegex);
+    return match ? match[0] : null;
+  });
+}
 
-// console.log('dev', extractedPrices, priceStrings);
-
-document.querySelectorAll('[data-test="counter"]').forEach((counterDiv) => {
-  let nextSibling = counterDiv.nextElementSibling;
-
-  while (nextSibling) {
-    if (nextSibling.querySelector('[data-test="actual-price"]')) {
-      break;
+function getActualPriceDiv(counterDiv) {
+  let actualPriceDiv = counterDiv.nextElementSibling;
+  while (actualPriceDiv) {
+    if (actualPriceDiv.querySelector('[data-test="actual-price"]')) {
+      return actualPriceDiv;
     }
-    nextSibling = nextSibling.nextElementSibling;
+    actualPriceDiv = actualPriceDiv.nextElementSibling;
   }
+  return null;
+}
 
-  if (counterDiv && nextSibling) {
-    const newDiv = document.createElement('div');
+function createBrohlikButton() {
+  const button = document.createElement('button');
+  button.textContent = 'JT';
 
-    const button = document.createElement('button');
-    button.textContent = 'JT';
-    button.classList.add('brohlik');
+  const options = ['JT', 'RK', 'Shared']; // Move to settings/config
+  let index = 0;
 
-    const options = ['JT', 'RK', 'Shared'];
-    let index = 0;
+  button.addEventListener('click', () => {
+    index = (index + 1) % options.length;
+    button.textContent = options[index];
+    // TODO: Update button color per user (green, yellow, blue)
+  });
 
-    button.addEventListener('click', () => {
-      index = (index + 1) % options.length;
-      button.textContent = options[index];
-    });
+  return button;
+}
 
-    newDiv.appendChild(button);
+function injectBrohlikButtons() {
+  document.querySelectorAll('[data-test="counter"]').forEach((counterDiv) => {
+    const actualPriceDiv = getActualPriceDiv(counterDiv);
+    if (!actualPriceDiv) return;
 
-    counterDiv.parentNode.insertBefore(newDiv, nextSibling);
+    const brohlikDiv = document.createElement('div');
+    brohlikDiv.classList.add('brohlik');
+    brohlikDiv.appendChild(createBrohlikButton());
 
-    // mobile first
-    counterDiv.style.flex = '1 0 0%'; // add class and style from external style sheet
-    counterDiv.style.justifyContent = 'flex-end';
-    // responsive parent: counterDiv.parentNode.style.flexWrap = 'nowrap';
-  }
-});
+    counterDiv.parentNode.insertBefore(brohlikDiv, actualPriceDiv);
+  });
+}
+
+const priceStrings = getPriceStrings();
+const extractedPrices = extractPrices(priceStrings);
+
+injectBrohlikButtons();
 
 browser.scripting.insertCSS({
   target: { allFrames: true },
   files: ['styles.css'],
 });
 
-// 1. add the additional column for 1, 2 or both users
-// 3. styles
-// 2. calculation algo
+// TODO:
+// 1. Styles
+// 2. Calculation algorithm

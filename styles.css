@@ -1,4 +1,17 @@
-button.brohlik {
-  padding: 5px;
-  border: 1px solid #000;
+/* .overrides {
+  flex: 1 0 0%;
+  justify-content: flex-end;
+} */
+
+.brohlik {
+  margin: 0 6rem;
+
+  button {
+    padding: 8px;
+    height: 32px;
+    line-height: normal;
+  }
 }
+
+/* fix: when the button width changes based on inner content, it shifts the counter div position */
+/* fix: at certain sizes, the button forces price to the next line */
