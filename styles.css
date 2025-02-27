@@ -1,17 +1,20 @@
-/* .overrides {
-  flex: 1 0 0%;
-  justify-content: flex-end;
-} */
-
 .brohlik {
-  margin: 0 6rem;
+  margin: 0 5rem;
 
   button {
     padding: 8px;
+    width: 65px;
     height: 32px;
     line-height: normal;
   }
 }
 
-/* fix: when the button width changes based on inner content, it shifts the counter div position */
-/* fix: at certain sizes, the button forces price to the next line */
+@media (min-width: 959px) {
+  .overrides {
+    flex-flow: nowrap;
+  }
+
+  .brohlik {
+    margin: 0 3rem;
+  }
+}

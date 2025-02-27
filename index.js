@@ -50,6 +50,7 @@ function injectBrohlikButtons() {
     brohlikDiv.classList.add('brohlik');
     brohlikDiv.appendChild(createBrohlikButton());
 
+    counterDiv.parentNode.classList.add('overrides');
     counterDiv.parentNode.insertBefore(brohlikDiv, actualPriceDiv);
   });
 }
