@@ -6,7 +6,26 @@
     width: 65px;
     height: 32px;
     line-height: normal;
+
+    &:hover {
+      filter: brightness(85%);
+    }
   }
+}
+
+.user-one-btn,
+.user-one-btn:hover {
+  background: var(--color-icon-brand);
+}
+
+.user-two-btn,
+.user-two-btn:hover {
+  background: var(--toastify-color-info);
+}
+
+.shared-btn,
+.shared-btn:hover {
+  background: var(--color-icon-baby-club);
 }
 
 @media (min-width: 959px) {

@@ -30,12 +30,14 @@ function createBrohlikButton() {
   button.textContent = 'JT';
 
   const options = ['JT', 'RK', 'Shared']; // Move to settings/config
-  let index = 0;
+  const classes = ['user-one-btn', 'user-two-btn', 'shared-btn'];
 
+  let index = 0;
   button.addEventListener('click', () => {
+    button.classList.remove(classes[index]);
     index = (index + 1) % options.length;
     button.textContent = options[index];
-    // TODO: Update button color per user (green, yellow, blue)
+    button.classList.add(classes[index]);
   });
 
   return button;
@@ -46,6 +48,7 @@ function injectBrohlikButtons() {
     const actualPriceDiv = getActualPriceDiv(counterDiv);
     if (!actualPriceDiv) return;
 
+    //  Remove any pre-existing buttons before injecting the new ones?
     const brohlikDiv = document.createElement('div');
     brohlikDiv.classList.add('brohlik');
     brohlikDiv.appendChild(createBrohlikButton());
