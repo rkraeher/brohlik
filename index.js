@@ -14,12 +14,14 @@ function extractPrices(priceStrings) {
   });
 }
 
-function getActualPriceDiv(counterDiv) {
-  let actualPriceDiv = counterDiv.nextElementSibling;
-  while (actualPriceDiv) {
-    if (actualPriceDiv.querySelector('[data-test="actual-price"]')) {
-      return actualPriceDiv;
+function getActualPriceContainer(counterContainer) {
+  let actualPriceContainer = counterContainer.nextElementSibling;
+  while (actualPriceContainer) {
+    if (actualPriceContainer.querySelector('[data-test="actual-price"]')) {
+      return actualPriceContainer;
     }
+    actualPriceContainer = actualPriceContainer.nextElementSibling;
+
     actualPriceDiv = actualPriceDiv.nextElementSibling;
   }
   return null;
@@ -44,20 +46,36 @@ function createBrohlikButton() {
 }
 
 function injectBrohlikButtons() {
-  document.querySelectorAll('[data-test="counter"]').forEach((counterDiv) => {
-    const actualPriceDiv = getActualPriceDiv(counterDiv);
-    if (!actualPriceDiv) return;
+  document
+    .querySelectorAll('[data-test="counter"]')
+    .forEach((counterContainer) => {
+      const actualPriceContainer = getActualPriceContainer(counterContainer);
+      if (!actualPriceContainer) return;
 
-    const existingBrohlikDiv = counterDiv.parentNode.querySelector('.brohlik');
-    if (existingBrohlikDiv) existingBrohlikDiv.remove();
+      // console.log(
+      //   'dev actualPriceDiv.childNodes[0].lastChild.textContent',
+      //   actualPriceDiv.childNodes[0].lastChild.textContent
+      // );
 
-    const brohlikDiv = document.createElement('div');
-    brohlikDiv.classList.add('brohlik');
-    brohlikDiv.appendChild(createBrohlikButton());
+      const actualPrice = getActualPrice(counterContainer);
+      if (!actualPrice) return;
 
-    counterDiv.parentNode.classList.add('overrides');
-    counterDiv.parentNode.insertBefore(brohlikDiv, actualPriceDiv);
-  });
+      console.log('dev', actualPrice);
+
+      const existingBrohlikContainer =
+        counterContainer.parentNode.querySelector('.brohlik');
+      if (existingBrohlikContainer) existingBrohlikContainer.remove();
+
+      const brohlikContainer = document.createElement('div');
+      brohlikContainer.classList.add('brohlik');
+      brohlikContainer.appendChild(createBrohlikButton());
+
+      counterContainer.parentNode.classList.add('overrides');
+      counterContainer.parentNode.insertBefore(
+        brohlikContainer,
+        actualPriceContainer
+      );
+    });
 }
 
 const priceStrings = getPriceStrings();
