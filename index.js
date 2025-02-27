@@ -48,7 +48,9 @@ function injectBrohlikButtons() {
     const actualPriceDiv = getActualPriceDiv(counterDiv);
     if (!actualPriceDiv) return;
 
-    //  Remove any pre-existing buttons before injecting the new ones?
+    const existingBrohlikDiv = counterDiv.parentNode.querySelector('.brohlik');
+    if (existingBrohlikDiv) existingBrohlikDiv.remove();
+
     const brohlikDiv = document.createElement('div');
     brohlikDiv.classList.add('brohlik');
     brohlikDiv.appendChild(createBrohlikButton());

@@ -15,7 +15,7 @@
 
 .user-one-btn,
 .user-one-btn:hover {
-  background: var(--color-icon-brand);
+  background: var(--color-icon-brand); /* using rohlik's color variables */
 }
 
 .user-two-btn,
