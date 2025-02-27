@@ -1,17 +1,14 @@
 // for selector generation: npx playwright codegen url
 
-function getPriceStrings() {
-  return [...document.querySelectorAll('[data-test="actual-price"]')].map(
-    (el) => el.textContent
-  );
-}
+const shoppingCart = {};
 
-function extractPrices(priceStrings) {
+function extractPrice(priceString) {
   const priceRegex = /\d*\.?,?\d+/;
-  return priceStrings.map((str) => {
-    const match = str.match(priceRegex);
-    return match ? match[0] : null;
-  });
+
+  const match = priceString.match(priceRegex);
+  if (match) {
+    return parseFloat(match[0].replace(',', '.'));
+  } else return null;
 }
 
 function getActualPriceContainer(counterContainer) {
@@ -21,25 +18,34 @@ function getActualPriceContainer(counterContainer) {
       return actualPriceContainer;
     }
     actualPriceContainer = actualPriceContainer.nextElementSibling;
-
-    actualPriceDiv = actualPriceDiv.nextElementSibling;
   }
   return null;
 }
 
-function createBrohlikButton() {
+function createBrohlikButton(actualPrice) {
   const button = document.createElement('button');
+  const buttonId = window.crypto.randomUUID();
+  button.id = buttonId;
   button.textContent = 'JT';
 
-  const options = ['JT', 'RK', 'Shared']; // Move to settings/config
+  shoppingCart[buttonId] = { user: button.textContent, actualPrice }; // must update if price changes. right now it only sets initial but doesn't update
+
+  const options = ['JT', 'RK', 'Shared']; // Should be dynamically set in the extension settings
   const classes = ['user-one-btn', 'user-two-btn', 'shared-btn'];
 
   let index = 0;
   button.addEventListener('click', () => {
     button.classList.remove(classes[index]);
+
     index = (index + 1) % options.length;
     button.textContent = options[index];
     button.classList.add(classes[index]);
+
+    shoppingCart[buttonId].user = button.textContent;
+    console.log({ shoppingCart });
+    //* Continue from here. Stop to plan out how to approach this instead of just mindlessly coding my way through it
+    // It may make more sense to actually pass this event listener as a callback to the create button function,
+    // because it also needs data from the 'actualPriceContainer' sibling
   });
 
   return button;
@@ -52,15 +58,11 @@ function injectBrohlikButtons() {
       const actualPriceContainer = getActualPriceContainer(counterContainer);
       if (!actualPriceContainer) return;
 
-      // console.log(
-      //   'dev actualPriceDiv.childNodes[0].lastChild.textContent',
-      //   actualPriceDiv.childNodes[0].lastChild.textContent
-      // );
-
-      const actualPrice = getActualPrice(counterContainer);
-      if (!actualPrice) return;
-
-      console.log('dev', actualPrice);
+      const actualPrice = extractPrice(
+        actualPriceContainer.querySelector('[data-test="actual-price"]')
+          .textContent
+      );
+      // console.log('dev', actualPrice);
 
       const existingBrohlikContainer =
         counterContainer.parentNode.querySelector('.brohlik');
@@ -68,7 +70,8 @@ function injectBrohlikButtons() {
 
       const brohlikContainer = document.createElement('div');
       brohlikContainer.classList.add('brohlik');
-      brohlikContainer.appendChild(createBrohlikButton());
+
+      brohlikContainer.appendChild(createBrohlikButton(actualPrice));
 
       counterContainer.parentNode.classList.add('overrides');
       counterContainer.parentNode.insertBefore(
@@ -78,9 +81,6 @@ function injectBrohlikButtons() {
     });
 }
 
-const priceStrings = getPriceStrings();
-const extractedPrices = extractPrices(priceStrings);
-
 injectBrohlikButtons();
 
 browser.scripting.insertCSS({
@@ -89,5 +89,15 @@ browser.scripting.insertCSS({
 });
 
 // TODO:
-// 1. Styles
-// 2. Calculation algorithm
+// 1. Calculation algorithm
+// 2. Handle dynamic shopping cart updates (adjusting quantities)
+// 3. Config for users
+
+// Ok so each button has props: actualPrice, user, id
+
+//there are at least 4 possible update events:
+// 1. Quanity changes (so price updates)
+// 2. User changes
+// 3. Item is removed
+// 4. Item is added
+// We need to attach an event listeners onto the site buttons that trigger these updates...
