@@ -1,5 +1,3 @@
-// for selector generation: npx playwright codegen url
-
 const shoppingCart = {};
 
 function extractPrice(priceString) {
@@ -14,9 +12,8 @@ function extractPrice(priceString) {
   }
 }
 
-function initialiseShoppingCart(button, { price, quantity }) {
-  // do we actually need to store quantity or just track if it changes - its useless for the math
-  shoppingCart[button.id] = { user: button.textContent, price, quantity };
+function initialiseShoppingCart(button, price) {
+  shoppingCart[button.id] = { user: button.textContent, price };
 }
 
 function createBrohlikButton() {
@@ -67,22 +64,12 @@ function injectBrohlikButtons() {
           .textContent
       );
 
-      const quantityElement = counterContainer.querySelector(
-        '[data-test="item-counter-input"]'
-      );
-      const initialQuantity = quantityElement
-        ? parseInt(quantityElement.value, 10)
-        : 0;
-
       const brohlikContainer = document.createElement('div');
       brohlikContainer.classList.add('brohlik');
 
       const brohlikButton = createBrohlikButton();
 
-      initialiseShoppingCart(brohlikButton, {
-        price: initialPrice,
-        quantity: initialQuantity,
-      });
+      initialiseShoppingCart(brohlikButton, initialPrice);
 
       brohlikContainer.appendChild(brohlikButton);
 
@@ -115,17 +102,11 @@ function trackItemChanges() {
 }
 
 function handleItemChange(wrapper) {
-  const quantityElement = wrapper.querySelector(
-    '[data-test="item-counter-input"]'
-  );
-  const quantity = quantityElement ? parseInt(quantityElement.value, 10) : 0;
-
   const priceElement = wrapper.querySelector('[data-test="actual-price"]');
   const price = extractPrice(priceElement.textContent);
 
-  console.log('Update', priceElement.textContent);
-  console.log(`Updated item: Quantity=${quantity}, Price=${price}`);
-  // Now update your extension state accordingly
+  console.log(`Updated item: Price=${price}`);
+  // Now update the shoppingCart state.
 }
 
 injectBrohlikButtons();
@@ -139,7 +120,7 @@ browser.scripting.insertCSS({
 });
 
 // TODO:
-// 1. Handle dynamic shopping cart updates
+// 1. Handle dynamic shopping cart updates (IN PROGRESS)
 // 2. Calculation algorithm
 // 3. Totals UI
 // 4. Config for users
@@ -148,9 +129,12 @@ browser.scripting.insertCSS({
 //// 1. Quanity changes (so price updates)
 //// 2. User changes
 // 3. Item is removed
-// 4. Item is added
+// Instead of tracking quantity = 0, we should check whole cart page for the item-wrapper (can use buttonId?)
+
+// 4. Item is added (from the same page)
 
 // Edgecases
 // 1. Do not include when an item in cart is sold out
 
 // Stop@1350
+// should we be looping item-wrapper instead of using counter and checking siblings?
