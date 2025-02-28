@@ -3,12 +3,40 @@
 const shoppingCart = {};
 
 function extractPrice(priceString) {
-  const priceRegex = /\d*\.?,?\d+/;
+  const cleanedString = priceString.replace(/\s/g, ''); // Remove any spaces inside numbers (e.g., "1 900" → "1900")
+  const priceRegex = /\d+([.,]?\d+)?/;
 
-  const match = priceString.match(priceRegex);
+  const match = cleanedString.match(priceRegex);
   if (match) {
-    return parseFloat(match[0].replace(',', '.'));
-  } else return null;
+    return parseFloat(match[0].replace(',', '.')); // Convert commas to dots for decimals
+  } else {
+    return null;
+  }
+}
+
+function initialiseShoppingCart(button, { price, quantity }) {
+  // do we actually need to store quantity or just track if it changes - its useless for the math
+  shoppingCart[button.id] = { user: button.textContent, price, quantity };
+}
+
+function createBrohlikButton() {
+  const button = document.createElement('button');
+  const buttonId = window.crypto.randomUUID();
+  button.id = buttonId;
+  button.textContent = 'JT'; // first user or some default
+
+  const options = ['JT', 'RK', 'Shared']; // Should be dynamically set in the extension settings
+  const classes = ['user-one-btn', 'user-two-btn', 'shared-btn']; // user-green, user-blue, shared-pink...
+
+  let index = 0;
+  button.addEventListener('click', () => {
+    button.classList.remove(classes[index]);
+    index = (index + 1) % options.length;
+    button.textContent = options[index];
+    button.classList.add(classes[index]);
+  });
+
+  return button;
 }
 
 function getActualPriceContainer(counterContainer) {
@@ -22,56 +50,41 @@ function getActualPriceContainer(counterContainer) {
   return null;
 }
 
-function createBrohlikButton(actualPrice) {
-  const button = document.createElement('button');
-  const buttonId = window.crypto.randomUUID();
-  button.id = buttonId;
-  button.textContent = 'JT';
-
-  shoppingCart[buttonId] = { user: button.textContent, actualPrice }; // must update if price changes. right now it only sets initial but doesn't update
-
-  const options = ['JT', 'RK', 'Shared']; // Should be dynamically set in the extension settings
-  const classes = ['user-one-btn', 'user-two-btn', 'shared-btn'];
-
-  let index = 0;
-  button.addEventListener('click', () => {
-    button.classList.remove(classes[index]);
-
-    index = (index + 1) % options.length;
-    button.textContent = options[index];
-    button.classList.add(classes[index]);
-
-    shoppingCart[buttonId].user = button.textContent;
-    console.log({ shoppingCart });
-    //* Continue from here. Stop to plan out how to approach this instead of just mindlessly coding my way through it
-    // It may make more sense to actually pass this event listener as a callback to the create button function,
-    // because it also needs data from the 'actualPriceContainer' sibling
-  });
-
-  return button;
-}
-
 function injectBrohlikButtons() {
   document
     .querySelectorAll('[data-test="counter"]')
+    // should we be looping item-wrapper instead of using counter and checking siblings?
     .forEach((counterContainer) => {
-      const actualPriceContainer = getActualPriceContainer(counterContainer);
-      if (!actualPriceContainer) return;
-
-      const actualPrice = extractPrice(
-        actualPriceContainer.querySelector('[data-test="actual-price"]')
-          .textContent
-      );
-      // console.log('dev', actualPrice);
-
       const existingBrohlikContainer =
         counterContainer.parentNode.querySelector('.brohlik');
       if (existingBrohlikContainer) existingBrohlikContainer.remove();
 
+      const actualPriceContainer = getActualPriceContainer(counterContainer);
+      if (!actualPriceContainer) return;
+
+      const initialPrice = extractPrice(
+        actualPriceContainer.querySelector('[data-test="actual-price"]')
+          .textContent
+      );
+
+      const quantityElement = counterContainer.querySelector(
+        '[data-test="item-counter-input"]'
+      );
+      const initialQuantity = quantityElement
+        ? parseInt(quantityElement.value, 10)
+        : 0;
+
       const brohlikContainer = document.createElement('div');
       brohlikContainer.classList.add('brohlik');
 
-      brohlikContainer.appendChild(createBrohlikButton(actualPrice));
+      const brohlikButton = createBrohlikButton();
+
+      initialiseShoppingCart(brohlikButton, {
+        price: initialPrice,
+        quantity: initialQuantity,
+      });
+
+      brohlikContainer.appendChild(brohlikButton);
 
       counterContainer.parentNode.classList.add('overrides');
       counterContainer.parentNode.insertBefore(
@@ -81,7 +94,44 @@ function injectBrohlikButtons() {
     });
 }
 
+function trackItemChanges() {
+  const itemWrappers = document.querySelectorAll('[data-test="item-wrapper"]');
+
+  itemWrappers.forEach((wrapper) => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' || mutation.type === 'attributes') {
+          handleItemChange(wrapper);
+        }
+      });
+    });
+
+    observer.observe(wrapper, {
+      childList: true, // Detect added/removed elements. Can we do this for the entire cart?
+      attributes: true, // Detect attribute changes
+      subtree: true, // Observe all child elements
+    });
+  });
+}
+
+function handleItemChange(wrapper) {
+  const quantityElement = wrapper.querySelector(
+    '[data-test="item-counter-input"]'
+  );
+  const quantity = quantityElement ? parseInt(quantityElement.value, 10) : 0;
+
+  const priceElement = wrapper.querySelector('[data-test="actual-price"]');
+  const price = extractPrice(priceElement.textContent);
+
+  console.log('Update', priceElement.textContent);
+  console.log(`Updated item: Quantity=${quantity}, Price=${price}`);
+  // Now update your extension state accordingly
+}
+
 injectBrohlikButtons();
+trackItemChanges();
+
+console.log('dev', shoppingCart);
 
 browser.scripting.insertCSS({
   target: { allFrames: true },
@@ -89,15 +139,18 @@ browser.scripting.insertCSS({
 });
 
 // TODO:
-// 1. Calculation algorithm
-// 2. Handle dynamic shopping cart updates (adjusting quantities)
-// 3. Config for users
+// 1. Handle dynamic shopping cart updates
+// 2. Calculation algorithm
+// 3. Totals UI
+// 4. Config for users
 
-// Ok so each button has props: actualPrice, user, id
-
-//there are at least 4 possible update events:
-// 1. Quanity changes (so price updates)
-// 2. User changes
+// There are at least 4 possible update events:
+//// 1. Quanity changes (so price updates)
+//// 2. User changes
 // 3. Item is removed
 // 4. Item is added
-// We need to attach an event listeners onto the site buttons that trigger these updates...
+
+// Edgecases
+// 1. Do not include when an item in cart is sold out
+
+// Stop@1350
