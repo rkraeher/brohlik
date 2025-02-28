@@ -1,17 +1,5 @@
 const shoppingCart = {};
 
-function extractPrice(priceString) {
-  const cleanedString = priceString.replace(/\s/g, ''); // Remove any spaces inside numbers (e.g., "1 900" → "1900")
-  const priceRegex = /\d+([.,]?\d+)?/;
-
-  const match = cleanedString.match(priceRegex);
-  if (match) {
-    return parseFloat(match[0].replace(',', '.')); // Convert commas to dots for decimals
-  } else {
-    return null;
-  }
-}
-
 function initialiseShoppingCart(button, price) {
   shoppingCart[button.id] = { user: button.textContent, price };
 }
@@ -36,13 +24,25 @@ function createBrohlikButton() {
   return button;
 }
 
-function getActualPriceContainer(counterContainer) {
-  let actualPriceContainer = counterContainer.nextElementSibling;
-  while (actualPriceContainer) {
-    if (actualPriceContainer.querySelector('[data-test="actual-price"]')) {
-      return actualPriceContainer;
+function extractPrice(priceString) {
+  const cleanedString = priceString.replace(/\s/g, ''); // Remove any spaces inside numbers (e.g., "1 900" → "1900")
+  const priceRegex = /\d+([.,]?\d+)?/;
+
+  const match = cleanedString.match(priceRegex);
+  if (match) {
+    return parseFloat(match[0].replace(',', '.')); // Convert commas to dots for decimals
+  } else {
+    return null;
+  }
+}
+
+function getContainerSibling(reference, selector) {
+  let sibling = reference.nextElementSibling;
+  while (sibling) {
+    if (sibling.querySelector(selector)) {
+      return sibling;
     }
-    actualPriceContainer = actualPriceContainer.nextElementSibling;
+    sibling = sibling.nextElementSibling;
   }
   return null;
 }
@@ -50,18 +50,22 @@ function getActualPriceContainer(counterContainer) {
 function injectBrohlikButtons() {
   document
     .querySelectorAll('[data-test="counter"]')
-    // should we be looping item-wrapper instead of using counter and checking siblings?
     .forEach((counterContainer) => {
+      const actualPriceSelector = '[data-test="actual-price"]';
+      const innerItemWrapper = counterContainer.parentNode;
+
       const existingBrohlikContainer =
-        counterContainer.parentNode.querySelector('.brohlik');
+        innerItemWrapper.querySelector('.brohlik');
       if (existingBrohlikContainer) existingBrohlikContainer.remove();
 
-      const actualPriceContainer = getActualPriceContainer(counterContainer);
+      const actualPriceContainer = getContainerSibling(
+        counterContainer,
+        actualPriceSelector
+      );
       if (!actualPriceContainer) return;
 
       const initialPrice = extractPrice(
-        actualPriceContainer.querySelector('[data-test="actual-price"]')
-          .textContent
+        actualPriceContainer.querySelector(actualPriceSelector).textContent
       );
 
       const brohlikContainer = document.createElement('div');
@@ -73,12 +77,17 @@ function injectBrohlikButtons() {
 
       brohlikContainer.appendChild(brohlikButton);
 
-      counterContainer.parentNode.classList.add('overrides');
-      counterContainer.parentNode.insertBefore(
-        brohlikContainer,
-        actualPriceContainer
-      );
+      innerItemWrapper.classList.add('overrides');
+      innerItemWrapper.insertBefore(brohlikContainer, actualPriceContainer);
     });
+}
+
+function handleItemChange(wrapper) {
+  const priceElement = wrapper.querySelector('[data-test="actual-price"]');
+  const price = extractPrice(priceElement.textContent);
+
+  console.log(`Updated item: Price=${price}`);
+  // Now update the shoppingCart state.
 }
 
 function trackItemChanges() {
@@ -99,14 +108,6 @@ function trackItemChanges() {
       subtree: true, // Observe all child elements
     });
   });
-}
-
-function handleItemChange(wrapper) {
-  const priceElement = wrapper.querySelector('[data-test="actual-price"]');
-  const price = extractPrice(priceElement.textContent);
-
-  console.log(`Updated item: Price=${price}`);
-  // Now update the shoppingCart state.
 }
 
 injectBrohlikButtons();
@@ -135,6 +136,3 @@ browser.scripting.insertCSS({
 
 // Edgecases
 // 1. Do not include when an item in cart is sold out
-
-// Stop@1350
-// should we be looping item-wrapper instead of using counter and checking siblings?
