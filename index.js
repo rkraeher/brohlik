@@ -36,49 +36,54 @@ function createBrohlikButton() {
   return button;
 }
 
-function getActualPriceContainer(counterContainer) {
-  let actualPriceContainer = counterContainer.nextElementSibling;
-  while (actualPriceContainer) {
-    if (actualPriceContainer.querySelector('[data-test="actual-price"]')) {
-      return actualPriceContainer;
+// can make it more abstract: get sibling container and pass the selecter
+function getSiblingContainer(sibling, selector) {
+  let container = sibling.nextElementSibling; // we need to use sibling of counter, because the actual-price is nested in two divs
+  while (container) {
+    // if (outerContainer.querySelector('[data-test="actual-price"]')) {
+    if (container.querySelector(selector)) {
+      return container;
     }
-    actualPriceContainer = actualPriceContainer.nextElementSibling;
+    container = container.nextElementSibling;
   }
   return null;
 }
 
+// why we need counterContainer? because its the level in dom we need to utilise
+// or we could just access grandparent. Don't both rely on maintaining a certain dom structure?
+// if so, which is more resilient and simpler?
+// NOT having to use getSiblingContainer is simpler, and maybe they are equally as likely to be changed?
 function injectBrohlikButtons() {
-  document
-    .querySelectorAll('[data-test="counter"]')
-    // should we be looping item-wrapper instead of using counter and checking siblings?
-    .forEach((counterContainer) => {
-      const existingBrohlikContainer =
-        counterContainer.parentNode.querySelector('.brohlik');
-      if (existingBrohlikContainer) existingBrohlikContainer.remove();
+  document.querySelectorAll('[data-test="item-wrapper"]').forEach((wrapper) => {
+    const existingBrohlikContainer = wrapper.querySelector('.brohlik');
+    if (existingBrohlikContainer) existingBrohlikContainer.remove();
 
-      const actualPriceContainer = getActualPriceContainer(counterContainer);
-      if (!actualPriceContainer) return;
+    const priceSpan = wrapper.querySelector('[data-test="actual-price"]');
+    const counterContainer = wrapper.querySelector('[data-test="counter"]');
 
-      const initialPrice = extractPrice(
-        actualPriceContainer.querySelector('[data-test="actual-price"]')
-          .textContent
-      );
+    // because its nested
+    const priceContainer = getSiblingContainer(
+      counterContainer,
+      '[data-test="actual-price"]'
+    );
+    if (!priceSpan || !counterContainer) return;
 
-      const brohlikContainer = document.createElement('div');
-      brohlikContainer.classList.add('brohlik');
+    const initialPrice = extractPrice(priceSpan.textContent);
 
-      const brohlikButton = createBrohlikButton();
+    const brohlikContainer = document.createElement('div');
+    brohlikContainer.classList.add('brohlik');
 
-      initialiseShoppingCart(brohlikButton, initialPrice);
+    const brohlikButton = createBrohlikButton();
+    initialiseShoppingCart(brohlikButton, initialPrice);
 
-      brohlikContainer.appendChild(brohlikButton);
+    brohlikContainer.appendChild(brohlikButton);
 
-      counterContainer.parentNode.classList.add('overrides');
-      counterContainer.parentNode.insertBefore(
-        brohlikContainer,
-        actualPriceContainer
-      );
-    });
+    console.log('dev', counterContainer, priceSpan, priceContainer);
+
+    // innerItemWrapper
+    counterContainer.parentNode.classList.add('overrides');
+    counterContainer.parentNode.insertBefore(brohlikContainer, priceContainer);
+  });
 }
 
 function trackItemChanges() {
@@ -102,10 +107,10 @@ function trackItemChanges() {
 }
 
 function handleItemChange(wrapper) {
-  const priceElement = wrapper.querySelector('[data-test="actual-price"]');
-  const price = extractPrice(priceElement.textContent);
+  const priceSpan = wrapper.querySelector('[data-test="actual-price"]');
+  const price = extractPrice(priceSpan.textContent);
 
-  console.log(`Updated item: Price=${price}`);
+  console.log('dev', `Updated item: Price=${price}`);
   // Now update the shoppingCart state.
 }
 
