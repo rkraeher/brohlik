@@ -25,12 +25,26 @@ function createBrohlikButton() {
 }
 
 function extractPrice(priceString) {
-  const cleanedString = priceString.replace(/\s/g, ''); // Remove any spaces inside numbers (e.g., "1 900" → "1900")
-  const priceRegex = /\d+([.,]?\d+)?/;
+  const siteLang = document.documentElement.lang.split('-')[0]; // "en-CZ" or "cs-CZ"
+  const priceFormatConfig = {
+    en: {
+      regex: /[\d.,]+/,
+      pattern: /,/g,
+      replacement: '',
+    },
+    cs: {
+      regex: /\d+([.,]?\d+)?/,
+      pattern: ',',
+      replacement: '.',
+    },
+  };
 
-  const match = cleanedString.match(priceRegex);
+  const { regex, pattern, replacement } = priceFormatConfig[siteLang];
+  const cleanedString = priceString.replace(/\s/g, '');
+  const match = cleanedString.match(regex);
+
   if (match) {
-    return parseFloat(match[0].replace(',', '.')); // Convert commas to dots for decimals
+    return parseFloat(match[0].replace(pattern, replacement));
   } else {
     return null;
   }
