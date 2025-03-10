@@ -16,6 +16,14 @@
       "css": ["styles.css"]
     }
   ],
-  "permissions": ["activeTab"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "permissions": [
+    "activeTab",
+    "webRequest",
+    "webRequestBlocking",
+    "webRequestFilterResponse"
+  ],
   "host_permissions": ["*://*.rohlik.cz/*"]
 }
