@@ -1,6 +1,10 @@
-function createBrohlikButton() {
+function dispatchCartUpdate(productId, user) {
+  browser.runtime.sendMessage({ action: 'updateCart', productId, user });
+}
+
+function createBrohlikButton(productId) {
   const button = document.createElement('button');
-  const buttonId = window.crypto.randomUUID();
+  const buttonId = window.crypto.randomUUID(); // do we even need buttonId if we use productId for the cart?
   button.id = buttonId;
   button.textContent = 'JT'; // first user or some default (can come from shoppingCart in background.js)
 
@@ -13,7 +17,7 @@ function createBrohlikButton() {
     index = (index + 1) % options.length;
 
     button.textContent = options[index];
-    // send the user and the data-product-id to the background
+    dispatchCartUpdate(productId, options[index]);
 
     button.classList.add(classes[index]);
   });
@@ -49,12 +53,18 @@ function injectBrohlikButtons() {
         actualPriceSelector
       );
 
-      if (!actualPriceContainer) return;
+      const updateQuantityButton =
+        counterContainer.querySelector('[data-product-id]');
+      const productId = updateQuantityButton
+        ? updateQuantityButton.getAttribute('data-product-id')
+        : null;
+
+      if (!actualPriceContainer || !productId) return;
 
       const brohlikContainer = document.createElement('div');
       brohlikContainer.classList.add('brohlik');
 
-      const brohlikButton = createBrohlikButton();
+      const brohlikButton = createBrohlikButton(productId);
 
       brohlikContainer.appendChild(brohlikButton);
 
@@ -78,15 +88,6 @@ browser.scripting.insertCSS({
 // 3. Item is removed
 // 4. Item is added (from the same page)
 
-// Using API requests, The flow is this
-// 1. use manifest.json to inject the interceptor in the host page
-// 2. When it finds the data, you can do a postMessage
-// 3. Have a ContentScript to listen to onmessage to retrieve the data
-// 4. Then you can do what you want with the data
-
-// https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Intercept_HTTP_requests
-// http-response extension example
-
 // TODO:
 // - Calculation algorithm
 // - Totals UI
@@ -100,6 +101,3 @@ browser.scripting.insertCSS({
 //     ui.js - UI manipulation and button creation
 //     dataExtraction.js - Price parsing and data retrieval
 //     events.js - Tracking changes to the cart
-
-// data-product-id in the dom is associated with the productId from api.
-// Can use this to match buttons with their corresponding item in the shoppingCart in background.js

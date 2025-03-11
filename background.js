@@ -2,10 +2,6 @@ const shoppingCart = {};
 const CHECK_CART_ENDPOINT =
   'https://www.rohlik.cz/services/frontend-service/v2/cart-review/check-cart';
 
-// needs to receive buttonIds and receive user updates from content.js
-// OR, we generate a buttonId here for every cart item
-// and use data-product-id to match the item with dom element and assign the buttonId
-// (do we need a button id if we already have productId?)
 function addToShoppingCart(item) {
   shoppingCart[item.productId] = {
     user: 'JT', // first user or some default
@@ -14,10 +10,18 @@ function addToShoppingCart(item) {
   };
 }
 
-// function updateShoppingCart(id, data) {
-//   shoppingCart[id] = { ...shoppingCart[id], ...data };
-//   console.log('cart', 'update', shoppingCart);
-// }
+function updateShoppingCart(productId, data) {
+  if (shoppingCart[productId]) {
+    shoppingCart[productId] = {
+      ...shoppingCart[productId],
+      ...data,
+    };
+  } else {
+    shoppingCart[productId] = data;
+  }
+
+  console.log('cart', 'update', shoppingCart);
+}
 
 function interceptor(details) {
   let filter = browser.webRequest.filterResponseData(details.requestId);
@@ -31,8 +35,16 @@ function interceptor(details) {
   };
 
   filter.onstop = () => {
-    console.log('Intercepted response body:', JSON.parse(response));
-    // TODO: update the cart
+    const items = JSON.parse(response)?.data?.items;
+    console.log('Intercepted response body:', items);
+
+    for (const item of Object.values(items)) {
+      updateShoppingCart(item.productId, {
+        price: item.price,
+        quantity: item.quantity,
+      });
+    }
+
     filter.close();
   };
 }
@@ -60,6 +72,12 @@ async function initShoppingCart() {
     console.error('Error fetching cart data:', error);
   }
 }
+
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'updateCart') {
+    updateShoppingCart(message.productId, { user: message.user });
+  }
+});
 
 browser.tabs.onUpdated.addListener(initShoppingCart);
 browser.webRequest.onBeforeRequest.addListener(
