@@ -1,4 +1,6 @@
 const shoppingCart = {};
+const CHECK_CART_ENDPOINT =
+  'https://www.rohlik.cz/services/frontend-service/v2/cart-review/check-cart';
 
 // needs to receive buttonIds and receive user updates from content.js
 // OR, we generate a buttonId here for every cart item
@@ -17,57 +19,54 @@ function addToShoppingCart(item) {
 //   console.log('cart', 'update', shoppingCart);
 // }
 
-function listener(details) {
-  console.log('Intercepted request:', details.url);
-
+function interceptor(details) {
   let filter = browser.webRequest.filterResponseData(details.requestId);
   let decoder = new TextDecoder('utf-8');
-  let responseText = '';
+  let response = '';
 
   filter.ondata = (event) => {
     let chunk = decoder.decode(event.data, { stream: true });
-    responseText += chunk;
+    response += chunk;
     filter.write(event.data); // Pass original data
   };
 
   filter.onstop = () => {
-    console.log('Intercepted response body:', JSON.parse(responseText));
+    console.log('Intercepted response body:', JSON.parse(response));
+    // TODO: update the cart
     filter.close();
   };
 }
 
+async function initShoppingCart() {
+  try {
+    const response = await fetch(CHECK_CART_ENDPOINT);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const { data } = await response.json();
+
+    if (!data?.items || Object.keys(data.items).length === 0) {
+      console.warn('Shopping cart is empty or unavailable.');
+      return;
+    }
+
+    for (const item of Object.values(data.items)) {
+      addToShoppingCart(item);
+      // TODO: exclude notAvailableItems and multiply by quantity to get total
+    }
+    console.log('Shopping Cart initialised', shoppingCart);
+  } catch (error) {
+    console.error('Error fetching cart data:', error);
+  }
+}
+
+browser.tabs.onUpdated.addListener(initShoppingCart);
 browser.webRequest.onBeforeRequest.addListener(
-  listener,
+  interceptor,
   {
-    urls: [
-      'https://www.rohlik.cz/services/frontend-service/v2/cart-review/check-cart',
-    ],
+    urls: [CHECK_CART_ENDPOINT],
     types: ['xmlhttprequest'],
   },
   ['blocking']
 );
-
-window.addEventListener('load', () => {
-  fetch(
-    'https://www.rohlik.cz/services/frontend-service/v2/cart-review/check-cart'
-  )
-    .then((response) => response.json())
-    .then(({ data }) => {
-      for (const item of Object.values(data.items)) {
-        addToShoppingCart(item);
-        // exclude notAvailableItems and multiply by quantity to get total
-        // send shoppingCart via message to content.js
-      }
-    })
-    .catch((error) => {
-      console.error('Error fetching cart data:', error);
-    });
-});
-
-console.log('Background script loaded');
-console.log('Cart', shoppingCart);
-
-// Need to inspect the extension in order to see the logs about:debugging#/runtime/this-firefox
-// background scripts run on a separate, generated html page
-
-// Using webRequest.filterResponseData will replace the MutationObserver implementation for handling cart data and state
