@@ -1,14 +1,8 @@
-const shoppingCart = {};
-
-function initialiseShoppingCart(button, price) {
-  shoppingCart[button.id] = { user: button.textContent, price };
-}
-
 function createBrohlikButton() {
   const button = document.createElement('button');
   const buttonId = window.crypto.randomUUID();
   button.id = buttonId;
-  button.textContent = 'JT'; // first user or some default
+  button.textContent = 'JT'; // first user or some default (can come from shoppingCart in background.js)
 
   const options = ['JT', 'RK', 'Shared']; // Should be dynamically set in the extension settings
   const classes = ['user-one-btn', 'user-two-btn', 'shared-btn']; // user-green, user-blue, shared-pink...
@@ -17,37 +11,14 @@ function createBrohlikButton() {
   button.addEventListener('click', () => {
     button.classList.remove(classes[index]);
     index = (index + 1) % options.length;
+
     button.textContent = options[index];
+    // send the user and the data-product-id to the background
+
     button.classList.add(classes[index]);
   });
 
   return button;
-}
-
-function extractPrice(priceString) {
-  const siteLang = document.documentElement.lang.split('-')[0]; // "en-CZ" or "cs-CZ"
-  const priceFormatConfig = {
-    en: {
-      regex: /[\d.,]+/,
-      pattern: /,/g,
-      replacement: '',
-    },
-    cs: {
-      regex: /\d+([.,]?\d+)?/,
-      pattern: ',',
-      replacement: '.',
-    },
-  };
-
-  const { regex, pattern, replacement } = priceFormatConfig[siteLang];
-  const cleanedString = priceString.replace(/\s/g, '');
-  const match = cleanedString.match(regex);
-
-  if (match) {
-    return parseFloat(match[0].replace(pattern, replacement));
-  } else {
-    return null;
-  }
 }
 
 function getContainerSibling(reference, selector) {
@@ -70,24 +41,20 @@ function injectBrohlikButtons() {
 
       const existingBrohlikContainer =
         innerItemWrapper.querySelector('.brohlik');
+
       if (existingBrohlikContainer) existingBrohlikContainer.remove();
 
       const actualPriceContainer = getContainerSibling(
         counterContainer,
         actualPriceSelector
       );
-      if (!actualPriceContainer) return;
 
-      const initialPrice = extractPrice(
-        actualPriceContainer.querySelector(actualPriceSelector).textContent
-      );
+      if (!actualPriceContainer) return;
 
       const brohlikContainer = document.createElement('div');
       brohlikContainer.classList.add('brohlik');
 
       const brohlikButton = createBrohlikButton();
-
-      initialiseShoppingCart(brohlikButton, initialPrice);
 
       brohlikContainer.appendChild(brohlikButton);
 
@@ -96,57 +63,43 @@ function injectBrohlikButtons() {
     });
 }
 
-function handleItemChange(wrapper) {
-  const priceElement = wrapper.querySelector('[data-test="actual-price"]');
-  const price = extractPrice(priceElement.textContent);
-
-  console.log(`Updated item: Price=${price}`);
-  // Now update the shoppingCart state.
-}
-
-function trackItemChanges() {
-  const itemWrappers = document.querySelectorAll('[data-test="item-wrapper"]');
-
-  itemWrappers.forEach((wrapper) => {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList' || mutation.type === 'attributes') {
-          handleItemChange(wrapper);
-        }
-      });
-    });
-
-    observer.observe(wrapper, {
-      childList: true, // Detect added/removed elements. Can we do this for the entire cart?
-      attributes: true, // Detect attribute changes
-      subtree: true, // Observe all child elements
-    });
-  });
-}
-
 injectBrohlikButtons();
-trackItemChanges();
-
-console.log('dev', shoppingCart);
 
 browser.scripting.insertCSS({
   target: { allFrames: true },
   files: ['styles.css'],
 });
 
-// TODO:
-// 1. Handle dynamic shopping cart updates (IN PROGRESS)
-// 2. Calculation algorithm
-// 3. Totals UI
-// 4. Config for users
+// Handle dynamic shopping cart updates (IN PROGRESS)
 
 // There are at least 4 possible update events:
 //// 1. Quanity changes (so price updates)
 //// 2. User changes
 // 3. Item is removed
-// Instead of tracking quantity = 0, we should check whole cart page for the item-wrapper (can use buttonId?)
-
 // 4. Item is added (from the same page)
 
+// Using API requests, The flow is this
+// 1. use manifest.json to inject the interceptor in the host page
+// 2. When it finds the data, you can do a postMessage
+// 3. Have a ContentScript to listen to onmessage to retrieve the data
+// 4. Then you can do what you want with the data
+
+// https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Intercept_HTTP_requests
+// http-response extension example
+
+// TODO:
+// - Calculation algorithm
+// - Totals UI
+// - Config for users
+
 // Edgecases
-// 1. Do not include when an item in cart is sold out
+// - Do not include when an item in cart is sold out
+
+// Suggested Module Breakdown
+//     cart.js - Shopping cart state management
+//     ui.js - UI manipulation and button creation
+//     dataExtraction.js - Price parsing and data retrieval
+//     events.js - Tracking changes to the cart
+
+// data-product-id in the dom is associated with the productId from api.
+// Can use this to match buttons with their corresponding item in the shoppingCart in background.js
