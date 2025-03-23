@@ -10,17 +10,22 @@ function addToShoppingCart(item) {
   };
 }
 
-function updateShoppingCart(productId, data) {
-  if (shoppingCart[productId]) {
-    shoppingCart[productId] = {
-      ...shoppingCart[productId],
-      ...data,
-    };
-  } else {
-    shoppingCart[productId] = data;
-  }
+//!! When a new item is added from page, it's added without user name or brohlik button
+function updateShoppingCart(productId, updates) {
+  shoppingCart[productId] = {
+    ...shoppingCart[productId],
+    ...updates,
+  };
 
-  console.log('cart', 'update', shoppingCart);
+  console.log('cart update', shoppingCart);
+}
+
+function removeDeletedItems(currentProductIds) {
+  Object.keys(shoppingCart).forEach((productId) => {
+    if (!currentProductIds.has(productId)) {
+      delete shoppingCart[productId];
+    }
+  });
 }
 
 function interceptor(details) {
@@ -36,7 +41,11 @@ function interceptor(details) {
 
   filter.onstop = () => {
     const items = JSON.parse(response)?.data?.items;
-    console.log('Intercepted response body:', items);
+    console.log('Intercepted response body:', JSON.parse(response)?.data);
+
+    const currentProductIds = new Set(Object.keys(items || {}));
+
+    removeDeletedItems(currentProductIds);
 
     for (const item of Object.values(items)) {
       updateShoppingCart(item.productId, {
@@ -63,9 +72,20 @@ async function initShoppingCart() {
       return;
     }
 
+    // ok so both price changed and sold out items are put into this array
+    // but unsure if "Keep in Cart" button will re-call the endpoint or a different one
+    // Also, using "Keep in Cart" or adding from suggested productsadds it to cart but no brohlik button is injected
+    const notAvailableItems = data?.notAvailableItems.map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+    }));
+
+    console.log({ notAvailableItems });
+
     for (const item of Object.values(data.items)) {
       addToShoppingCart(item);
-      // TODO: exclude notAvailableItems and multiply by quantity to get total
+      // exclude notAvailableItems
+      // multiply by quantity to get total
     }
     console.log('Shopping Cart initialised', shoppingCart);
   } catch (error) {
@@ -75,7 +95,7 @@ async function initShoppingCart() {
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'updateCart') {
-    updateShoppingCart(message.productId, { user: message.user });
+    updateShoppingCart(message.productId, { user: message.user }); // default user here?
   }
 });
 

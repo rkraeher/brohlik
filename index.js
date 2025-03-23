@@ -85,8 +85,9 @@ browser.scripting.insertCSS({
 // There are at least 4 possible update events:
 //// 1. Quanity changes (so price updates)
 //// 2. User changes
-// 3. Item is removed
-// 4. Item is added (from the same page)
+// // 3. Item is removed // deleting item re-calls the endpoint, so cart will update
+//// 4. Item is added (from the same page // Also recalls the endpoint
+// 5. Not available for promotional price anymore Need to double check this one
 
 // TODO:
 // - Calculation algorithm
