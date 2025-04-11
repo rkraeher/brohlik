@@ -2,29 +2,54 @@ const shoppingCart = {};
 const CHECK_CART_ENDPOINT =
   'https://www.rohlik.cz/services/frontend-service/v2/cart-review/check-cart';
 
-function addToShoppingCart(item) {
+function addItem(item) {
   shoppingCart[item.productId] = {
     user: 'JT', // first user or some default
     price: item.price,
     quantity: item.quantity,
+    productId: item.productId,
+    name: item.productName,
   };
 }
 
 //!! When a new item is added from page, it's added without user name or brohlik button
-function updateShoppingCart(productId, updates) {
-  shoppingCart[productId] = {
-    ...shoppingCart[productId],
-    ...updates,
+// Check which endpoint is called when adding from page
+// Then add it to cart with default user
+// Send message to front end to inject brohlik button
+function updateItem(item) {
+  shoppingCart[item.productId] = {
+    ...shoppingCart[item.productId],
+    ...item,
   };
 
   console.log('cart update', shoppingCart);
 }
 
-function removeDeletedItems(currentProductIds) {
+function deleteRemovedItems(data) {
+  const currentProductIds = new Set(Object.keys(data?.items || {}));
+
   Object.keys(shoppingCart).forEach((productId) => {
     if (!currentProductIds.has(productId)) {
       delete shoppingCart[productId];
     }
+  });
+}
+
+function processAvailableItems(data, handler) {
+  const notAvailableItemIds = new Set(
+    data?.notAvailableItems.map((item) => item.productId)
+  );
+
+  const availableItems = Object.values(data?.items).filter(
+    (item) => !notAvailableItemIds.has(item.productId)
+  );
+
+  availableItems.forEach((item) => {
+    handler({
+      productId: item.productId,
+      price: item.price,
+      quantity: item.quantity,
+    });
   });
 }
 
@@ -36,23 +61,14 @@ function interceptor(details) {
   filter.ondata = (event) => {
     let chunk = decoder.decode(event.data, { stream: true });
     response += chunk;
-    filter.write(event.data); // Pass original data
+    filter.write(event.data); // Pass original data so regular request flow is not disrupted
   };
 
   filter.onstop = () => {
-    const items = JSON.parse(response)?.data?.items;
-    console.log('Intercepted response body:', JSON.parse(response)?.data);
+    const data = JSON.parse(response)?.data;
 
-    const currentProductIds = new Set(Object.keys(items || {}));
-
-    removeDeletedItems(currentProductIds);
-
-    for (const item of Object.values(items)) {
-      updateShoppingCart(item.productId, {
-        price: item.price,
-        quantity: item.quantity,
-      });
-    }
+    deleteRemovedItems(data);
+    processAvailableItems(data, updateItem);
 
     filter.close();
   };
@@ -75,18 +91,8 @@ async function initShoppingCart() {
     // ok so both price changed and sold out items are put into this array
     // but unsure if "Keep in Cart" button will re-call the endpoint or a different one
     // Also, using "Keep in Cart" or adding from suggested productsadds it to cart but no brohlik button is injected
-    const notAvailableItems = data?.notAvailableItems.map((item) => ({
-      productId: item.productId,
-      productName: item.productName,
-    }));
+    processAvailableItems(data, addItem);
 
-    console.log({ notAvailableItems });
-
-    for (const item of Object.values(data.items)) {
-      addToShoppingCart(item);
-      // exclude notAvailableItems
-      // multiply by quantity to get total
-    }
     console.log('Shopping Cart initialised', shoppingCart);
   } catch (error) {
     console.error('Error fetching cart data:', error);
@@ -95,7 +101,10 @@ async function initShoppingCart() {
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'updateCart') {
-    updateShoppingCart(message.productId, { user: message.user }); // default user here?
+    updateItem({
+      productId: message.productId,
+      user: message.user,
+    });
   }
 });
 

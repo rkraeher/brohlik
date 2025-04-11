@@ -80,25 +80,13 @@ browser.scripting.insertCSS({
   files: ['styles.css'],
 });
 
-// Handle dynamic shopping cart updates (IN PROGRESS)
+// Immediate TODOS:
+//// 1. exclude notAvailableItems
+// 2. handle "Keep in Cart" (a) what endpoint is called? (b) when using keep in cart must inject brohlik button
+// 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected and user is missing)
+// 4. Not available for promotional price anymore (Need to double check this one)
 
-// There are at least 4 possible update events:
-//// 1. Quanity changes (so price updates)
-//// 2. User changes
-// // 3. Item is removed // deleting item re-calls the endpoint, so cart will update
-//// 4. Item is added (from the same page // Also recalls the endpoint
-// 5. Not available for promotional price anymore Need to double check this one
-
-// TODO:
+// Long term TODOS:
 // - Calculation algorithm
 // - Totals UI
 // - Config for users
-
-// Edgecases
-// - Do not include when an item in cart is sold out
-
-// Suggested Module Breakdown
-//     cart.js - Shopping cart state management
-//     ui.js - UI manipulation and button creation
-//     dataExtraction.js - Price parsing and data retrieval
-//     events.js - Tracking changes to the cart
