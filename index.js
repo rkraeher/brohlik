@@ -1,7 +1,19 @@
+// @ts-check
+
+/**
+ * Dispatches an update to the cart state handlers in background script.
+ * @param {string} productId
+ * @param {string} user
+ */
 function dispatchCartUpdate(productId, user) {
   browser.runtime.sendMessage({ action: 'updateCart', productId, user });
 }
 
+/**
+ * Creates a button that toggles between users and updates the cart.
+ * @param {string} productId - The ID of the product to associate with the button.
+ * @returns {HTMLButtonElement}
+ */
 function createBrohlikButton(productId) {
   const button = document.createElement('button');
   const buttonId = window.crypto.randomUUID(); // do we even need buttonId if we use productId for the cart?
@@ -25,10 +37,16 @@ function createBrohlikButton(productId) {
   return button;
 }
 
+/**
+ * Finds the next sibling container that matches the selector. Helps traverse the specific DOM structure of the cart
+ * @param {HTMLElement} reference - The reference element to search from.
+ * @param {string} selector - The CSS selector to match sibling elements.
+ * @returns {HTMLElement | null}
+ */
 function getContainerSibling(reference, selector) {
   let sibling = reference.nextElementSibling;
   while (sibling) {
-    if (sibling.querySelector(selector)) {
+    if (sibling instanceof HTMLElement && sibling.querySelector(selector)) {
       return sibling;
     }
     sibling = sibling.nextElementSibling;
@@ -36,12 +54,19 @@ function getContainerSibling(reference, selector) {
   return null;
 }
 
+/**
+ * Injects the Brohlik buttons into the cart UI.
+ */
 function injectBrohlikButtons() {
   document
     .querySelectorAll('[data-test="counter"]')
     .forEach((counterContainer) => {
+      if (!(counterContainer instanceof HTMLElement)) return;
+
       const actualPriceSelector = '[data-test="actual-price"]';
       const innerItemWrapper = counterContainer.parentNode;
+
+      if (!(innerItemWrapper instanceof HTMLElement)) return;
 
       const existingBrohlikContainer =
         innerItemWrapper.querySelector('.brohlik');
