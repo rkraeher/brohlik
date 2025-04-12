@@ -1,12 +1,28 @@
 // @ts-check
 
 /**
+ * @typedef {Object} ContentMessageActions
+ * @property {string} UPDATE_USER
+ */
+
+/**
+ * @type {ContentMessageActions}
+ */
+const CONTENT_MESSAGE_ACTIONS = {
+  UPDATE_USER: 'updateUser',
+};
+
+/**
  * Dispatches an update to the cart state handlers in background script.
  * @param {string} productId
  * @param {string} user
  */
 function dispatchCartUpdate(productId, user) {
-  browser.runtime.sendMessage({ action: 'updateCart', productId, user });
+  browser.runtime.sendMessage({
+    action: CONTENT_MESSAGE_ACTIONS.UPDATE_USER,
+    productId,
+    user,
+  });
 }
 
 /**
@@ -15,24 +31,26 @@ function dispatchCartUpdate(productId, user) {
  * @returns {HTMLButtonElement}
  */
 function createBrohlikButton(productId) {
+  function updateUser() {
+    button.classList.remove(classes[index]);
+    index = (index + 1) % users.length;
+
+    button.textContent = users[index];
+    dispatchCartUpdate(productId, users[index]);
+
+    button.classList.add(classes[index]);
+  }
+
   const button = document.createElement('button');
   const buttonId = window.crypto.randomUUID(); // do we even need buttonId if we use productId for the cart?
   button.id = buttonId;
   button.textContent = 'JT'; // first user or some default (can come from shoppingCart in background.js)
 
-  const options = ['JT', 'RK', 'Shared']; // Should be dynamically set in the extension settings
+  const users = ['JT', 'RK', 'Shared']; // Should be dynamically set in the extension settings
   const classes = ['user-one-btn', 'user-two-btn', 'shared-btn']; // user-green, user-blue, shared-pink...
 
   let index = 0;
-  button.addEventListener('click', () => {
-    button.classList.remove(classes[index]);
-    index = (index + 1) % options.length;
-
-    button.textContent = options[index];
-    dispatchCartUpdate(productId, options[index]);
-
-    button.classList.add(classes[index]);
-  });
+  button.addEventListener('click', updateUser);
 
   return button;
 }
@@ -108,7 +126,7 @@ browser.scripting.insertCSS({
 // Immediate TODOS:
 //// 1. exclude notAvailableItems
 // 2. handle "Keep in Cart" - Double check this case. It should already be handled now with the expanded url
-// 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected and user is missing)
+// 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected)
 
 // Long term TODOS:
 // - Calculation algorithm

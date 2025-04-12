@@ -1,6 +1,21 @@
 // @ts-check
 
 /**
+ * @typedef {Object} BackgroundMessageActions
+ * @property {string} UPDATE_USER
+ */
+
+/**
+ * @type {BackgroundMessageActions}
+ */
+const BACKGROUND_MESSAGE_ACTIONS = {
+  UPDATE_USER: 'updateUser',
+};
+
+const CART_REVIEW_ENDPOINT =
+  'https://www.rohlik.cz/services/frontend-service/v2/cart-review';
+
+/**
  * @typedef {Object} CartItem
  * @property {string} [user]
  * @property {number} [price]
@@ -17,10 +32,6 @@
 
 /** @type {Record<number, CartItem>} */
 const shoppingCart = {};
-
-const CHECK_CART_ENDPOINT =
-  'https://www.rohlik.cz/services/frontend-service/v2/cart-review/check-cart';
-
 /**
  * Add a new item to the shopping cart.
  * @param {CartItem} item
@@ -48,8 +59,10 @@ function updateItem(item) {
   if (!productId) return;
   const defaultUser = 'JT';
 
+  //!! When a new item is added from page, it's added without brohlik button so we need to send message to frontend to inject the button
+  // browser.tabs.sendMessage to content script https://github.com/mdn/webextensions-examples/blob/main/cookie-bg-picker/background_scripts/background.js
   const updatedItem = {
-    user: user || shoppingCart[productId]?.user || defaultUser,
+    user: user || shoppingCart[productId]?.user || defaultUser, // call injectButton if both user and shoppingCart[id].user are undefined, passing the productId so we can use it to find the row in the UI
     price,
     quantity,
     productName,
@@ -71,7 +84,7 @@ function updateItem(item) {
 }
 
 /**
- * Remove items that are no longer in the cart data.
+ * Delete items from shoppingCart state that have been removed from the client-side cart
  * @param {CartData} data
  */
 function deleteRemovedItems(data) {
@@ -121,14 +134,13 @@ function interceptor(details) {
     const availableItems = getAvailableItems(data);
     availableItems.forEach(updateItem);
 
-    //!! When a new item is added from page, it's added without user name or brohlik button. Send message to frontend to inject brohlike button.
     filter.close();
   };
 }
 
 async function initShoppingCart() {
   try {
-    const response = await fetch(CHECK_CART_ENDPOINT);
+    const response = await fetch(`${CART_REVIEW_ENDPOINT}/check-cart`);
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -150,21 +162,22 @@ async function initShoppingCart() {
   }
 }
 
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'updateCart') {
+browser.tabs.onUpdated.addListener(initShoppingCart);
+
+browser.webRequest.onBeforeRequest.addListener(
+  interceptor,
+  {
+    urls: [`${CART_REVIEW_ENDPOINT}/*`],
+    types: ['xmlhttprequest'],
+  },
+  ['blocking']
+);
+
+browser.runtime.onMessage.addListener((message) => {
+  if (message.action === BACKGROUND_MESSAGE_ACTIONS.UPDATE_USER) {
     updateItem({
       productId: message.productId,
       user: message.user,
     });
   }
 });
-
-browser.tabs.onUpdated.addListener(initShoppingCart);
-browser.webRequest.onBeforeRequest.addListener(
-  interceptor,
-  {
-    urls: ['https://www.rohlik.cz/services/frontend-service/v2/cart-review/*'],
-    types: ['xmlhttprequest'],
-  },
-  ['blocking']
-);
