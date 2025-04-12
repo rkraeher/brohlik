@@ -2,11 +2,11 @@
 
 /**
  * @typedef {Object} CartItem
- * @property {number} [productId]
+ * @property {string} [user]
  * @property {number} [price]
  * @property {number} [quantity]
  * @property {string} [productName]
- * @property {string} [user]
+ * @property {number} [productId]
  */
 
 /**
@@ -26,14 +26,16 @@ const CHECK_CART_ENDPOINT =
  * @param {CartItem} item
  */
 function addItem(item) {
-  if (!item.productId) return;
+  const { productId, price, quantity, productName } = item;
+  if (!productId) return;
+  const defaultUser = 'JT';
 
-  shoppingCart[item.productId] = {
-    user: 'JT', // default user
-    price: item.price,
-    quantity: item.quantity,
-    productId: item.productId,
-    productName: item.productName,
+  shoppingCart[productId] = {
+    user: defaultUser,
+    price,
+    quantity,
+    productName,
+    productId,
   };
 }
 
@@ -41,18 +43,30 @@ function addItem(item) {
  * Update an existing item in the shopping cart.
  * @param {CartItem} item
  */
-
-//!! When a new item is added from page, it's added without user name or brohlik button
-// Check which endpoint is called when adding from page
-// Then add it to cart with default user
-// Send message to front end to inject brohlik button
 function updateItem(item) {
-  if (!item.productId) return;
+  const { productId, price, quantity, productName, user } = item;
+  if (!productId) return;
+  const defaultUser = 'JT';
 
-  shoppingCart[item.productId] = {
-    ...shoppingCart[item.productId],
-    ...item,
+  const updatedItem = {
+    user: user || shoppingCart[productId]?.user || defaultUser,
+    price,
+    quantity,
+    productName,
+    productId,
   };
+
+  Object.keys(updatedItem).forEach((key) => {
+    if (updatedItem[key] == null) {
+      delete updatedItem[key];
+    }
+  });
+
+  shoppingCart[productId] = {
+    ...shoppingCart[productId],
+    ...updatedItem,
+  };
+
   console.log('cart update', shoppingCart);
 }
 
@@ -71,31 +85,18 @@ function deleteRemovedItems(data) {
 }
 
 /**
- * Process available items and pass them to the handler.
  * @param {CartData} data
- * @param {(item: CartItem) => void} handler
+ * @return {Array<CartItem>}
  */
 
-// ok so both price changed and sold out items are put into this array
-// but unsure if "Keep in Cart" button will re-call the endpoint or a different one
-// Also, using "Keep in Cart" or adding from suggested productsadds it to cart but no brohlik button is injected
-function processAvailableItems(data, handler) {
+function getAvailableItems(data) {
   const notAvailableItemIds = new Set(
     data?.notAvailableItems.map((item) => item.productId)
   );
 
-  const availableItems = Object.values(data?.items || {}).filter(
+  return Object.values(data?.items || {}).filter(
     (item) => !notAvailableItemIds.has(item.productId)
   );
-
-  availableItems.forEach((item) => {
-    handler({
-      productId: item.productId,
-      price: item.price,
-      quantity: item.quantity,
-      productName: item.productName,
-    });
-  });
 }
 
 /**
@@ -116,7 +117,11 @@ function interceptor(details) {
   filter.onstop = () => {
     const data = JSON.parse(response)?.data;
     deleteRemovedItems(data);
-    processAvailableItems(data, updateItem);
+
+    const availableItems = getAvailableItems(data);
+    availableItems.forEach(updateItem);
+
+    //!! When a new item is added from page, it's added without user name or brohlik button. Send message to frontend to inject brohlike button.
     filter.close();
   };
 }
@@ -136,7 +141,9 @@ async function initShoppingCart() {
       return;
     }
 
-    processAvailableItems(data, addItem);
+    const availableItems = getAvailableItems(data);
+    availableItems.forEach(addItem);
+
     console.log('Shopping Cart initialised', shoppingCart);
   } catch (error) {
     console.error('Error fetching cart data:', error);
