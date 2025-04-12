@@ -1,6 +1,7 @@
 const shoppingCart = {};
 const CHECK_CART_ENDPOINT =
   'https://www.rohlik.cz/services/frontend-service/v2/cart-review/check-cart';
+// 'https://www.rohlik.cz/services/frontend-service/v2/cart-review/*';
 
 function addItem(item) {
   shoppingCart[item.productId] = {
@@ -8,7 +9,7 @@ function addItem(item) {
     price: item.price,
     quantity: item.quantity,
     productId: item.productId,
-    name: item.productName,
+    productName: item.productName,
   };
 }
 
@@ -21,7 +22,6 @@ function updateItem(item) {
     ...shoppingCart[item.productId],
     ...item,
   };
-
   console.log('cart update', shoppingCart);
 }
 
@@ -49,6 +49,7 @@ function processAvailableItems(data, handler) {
       productId: item.productId,
       price: item.price,
       quantity: item.quantity,
+      productName: item.productName,
     });
   });
 }
@@ -112,7 +113,8 @@ browser.tabs.onUpdated.addListener(initShoppingCart);
 browser.webRequest.onBeforeRequest.addListener(
   interceptor,
   {
-    urls: [CHECK_CART_ENDPOINT],
+    // urls: [CHECK_CART_ENDPOINT],
+    urls: ['https://www.rohlik.cz/services/frontend-service/v2/cart-review/*'],
     types: ['xmlhttprequest'],
   },
   ['blocking']

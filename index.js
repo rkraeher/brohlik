@@ -82,7 +82,15 @@ browser.scripting.insertCSS({
 
 // Immediate TODOS:
 //// 1. exclude notAvailableItems
-// 2. handle "Keep in Cart" (a) what endpoint is called? (b) when using keep in cart must inject brohlik button
+// 2. handle "Keep in Cart" (and other edgecases, like clear cart)
+// cart-review/item/1448495899 PATCH endpoint is called, where the number is equal to items[productId][orderFieldId]
+// The response here includes notAvailableItems. We cannot directly call it on FE, but I believe we can call it from backgrounds script
+
+// OR /cart` GET endpoint is called with items, but without notAvailableItems in the response.
+// This endpoint we can call from FE, but we'd have to compare/filter its items array using notAvailableItems from other other /cart-review endpoint
+
+// Consider expanding the intercept url matcher, so that any /cart-review endpoint is intercepted, not only cart-review/check-cart (GET + PATCH item/orderFieldId)
+
 // 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected and user is missing)
 // 4. Not available for promotional price anymore (Need to double check this one)
 
