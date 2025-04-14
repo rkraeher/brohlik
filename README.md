@@ -1,8 +1,9 @@
 # brohlik / shared-grocery cart
 
-`web-ext run`
+Calculate split grocery costs between multiple users in one cart
 
-- make the url matcher more specific to the cart path?
-- Need to inspect the extension in order to see the logs about:debugging#/runtime/this-firefox
+For development:
+
+- `web-ext run`
+- see the background scripts console from about:debugging#/runtime/this-firefox
 - background scripts run on a separate, generated html page
-  -Using webRequest.filterResponseData will replace the MutationObserver implementation for handling cart data and state
