@@ -56,13 +56,32 @@ function addItem(item) {
  */
 function updateItem(item) {
   const { productId, price, quantity, productName, user } = item;
-  if (!productId) return;
   const defaultUser = 'JT';
+  if (!productId) return;
 
-  //!! When a new item is added from page, it's added without brohlik button so we need to send message to frontend to inject the button
-  // browser.tabs.sendMessage to content script https://github.com/mdn/webextensions-examples/blob/main/cookie-bg-picker/background_scripts/background.js
+  console.log(user, shoppingCart);
+  console.log(productName, !user && !shoppingCart[productId]?.user);
+
+  // !! Try locally running the cookie-bg-picker to see if the messaging works
+  if (!user && !shoppingCart[productId]?.user) {
+    browser.tabs.query({ url: '*://*.rohlik.cz/*' }).then((tabs) => {
+      for (const tab of tabs) {
+        if (tab.id) {
+          browser.tabs
+            .sendMessage(tab.id, {
+              action: 'injectBrohlikButton',
+              productId,
+            })
+            .catch((err) => {
+              console.warn('Could not send message to tab', tab.id, err);
+            });
+        }
+      }
+    });
+  }
+
   const updatedItem = {
-    user: user || shoppingCart[productId]?.user || defaultUser, // call injectButton if both user and shoppingCart[id].user are undefined, passing the productId so we can use it to find the row in the UI
+    user: user || shoppingCart[productId]?.user || defaultUser,
     price,
     quantity,
     productName,
@@ -80,7 +99,7 @@ function updateItem(item) {
     ...updatedItem,
   };
 
-  console.log('cart update', shoppingCart);
+  // console.log('cart update', shoppingCart);
 }
 
 /**
@@ -92,6 +111,7 @@ function deleteRemovedItems(data) {
 
   Object.keys(shoppingCart).forEach((productId) => {
     if (!currentProductIds.has(productId)) {
+      console.log('deleted item', shoppingCart[productId]);
       delete shoppingCart[productId];
     }
   });
@@ -156,7 +176,7 @@ async function initShoppingCart() {
     const availableItems = getAvailableItems(data);
     availableItems.forEach(addItem);
 
-    console.log('Shopping Cart initialised', shoppingCart);
+    // console.log('Shopping Cart initialised', shoppingCart);
   } catch (error) {
     console.error('Error fetching cart data:', error);
   }

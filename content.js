@@ -168,9 +168,17 @@ browser.scripting.insertCSS({
   files: ['styles.css'],
 });
 
+browser.runtime.onMessage.addListener((message) => {
+  console.log('message', message);
+  if (message.action === 'injectBrohlikButton' && message.productId) {
+    // injectButtonIntoItemRow(message.productId);
+  }
+});
+
+console.log('Brohlik content script loaded');
 // Immediate TODOS:
 //// 1. exclude notAvailableItems
-// 2. handle "Keep in Cart" - Double check this case. It should already be handled now with the expanded url
+//// 2. handle "Keep in Cart" - Double check this case. It should already be handled now with the expanded url
 // 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected)
 
 // Long term TODOS:
@@ -179,6 +187,6 @@ browser.scripting.insertCSS({
 // - Config for users
 
 // Edgecases
-// Keep in Cart button
-// Not available for promotional price anymore (need to double check this one. Isn't it same as Keep in Cart?)
+//// Keep in Cart button
 // // Empty the cart
+// Not available for promotional price anymore (need to double check this one. Isn't it same as Keep in Cart?)

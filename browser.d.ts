@@ -19,6 +19,11 @@ declare const browser: {
     }) => Promise<void>;
   };
   tabs: {
+    sendMessage(tabId: number, payload: any): Promise<void>;
+    query(params: {
+      active: boolean;
+      currentWindow: boolean;
+    }): Promise<browser.tabs.Tab[]>;
     onUpdated: {
       addListener: (
         listener: (tabId: number, changeInfo: any, tab: any) => void
