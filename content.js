@@ -1,4 +1,5 @@
 // @ts-check
+/// <reference path="./browser.d.ts" />
 
 /**
  * @typedef {Object} ContentMessageActions
@@ -123,7 +124,7 @@ function injectButtonIntoItemRow(productId) {
   if (!counterContainer || !(counterContainer instanceof HTMLElement)) return;
 
   const refs = getCounterDOMRefs(counterContainer);
-  if (!refs || !refs.actualPriceContainer) return;
+  if (!refs?.actualPriceContainer) return;
 
   const { innerItemWrapper, existingBrohlik, actualPriceContainer } = refs;
 

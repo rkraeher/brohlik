@@ -1,4 +1,5 @@
 // @ts-check
+/// <reference path="./browser.d.ts" />
 
 /**
  * @typedef {Object} BackgroundMessageActions
@@ -57,6 +58,10 @@ function addItem(item) {
 function updateItem(item) {
   const { productId, price, quantity, productName, user } = item;
   const defaultUser = 'JT';
+  const query = {
+    url: '*://*.rohlik.cz/*',
+  };
+
   if (!productId) return;
 
   console.log(user, shoppingCart);
@@ -64,7 +69,7 @@ function updateItem(item) {
 
   // !! Try locally running the cookie-bg-picker to see if the messaging works
   if (!user && !shoppingCart[productId]?.user) {
-    browser.tabs.query({ url: '*://*.rohlik.cz/*' }).then((tabs) => {
+    browser.tabs.query(query).then((tabs) => {
       for (const tab of tabs) {
         if (tab.id) {
           browser.tabs
