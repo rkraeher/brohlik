@@ -164,30 +164,36 @@ function injectBrohlikButtons() {
 
 injectBrohlikButtons();
 
-browser.scripting.insertCSS({
-  target: { allFrames: true },
-  files: ['styles.css'],
-});
-
-browser.runtime.onMessage.addListener((message) => {
-  console.log('message', message);
-  if (message.action === 'injectBrohlikButton' && message.productId) {
-    // injectButtonIntoItemRow(message.productId);
+/**
+ * Handles messages sent from the background script and performs actions
+ * @param {Object} request - The message object sent from the background script.
+ * @param {string} request.action - The action identifier.
+ * @param {string} [request.productId] - The product ID for which to inject the button.
+ * @param {Object} sender - Information about the message sender.
+ * @param {Function} sendResponse - A function to send a response back to the sender.
+ */
+function handleBackgroundMessage(request, sender, sendResponse) {
+  if (request?.action === 'injectBrohlikButton' && request?.productId) {
+    console.log('Message received from background script:', request, sender);
+    injectButtonIntoItemRow(request.productId);
+    // TODO: Remove this reload - it clears user state and hides console logs
+    window.location.reload();
   }
-});
+  // Optionally return a response:
+  // return Promise.resolve({ response: 'Response from content script' });
+}
 
-console.log('Brohlik content script loaded');
+browser.runtime.onMessage.addListener(handleBackgroundMessage);
+
 // Immediate TODOS:
-//// 1. exclude notAvailableItems
-//// 2. handle "Keep in Cart" - Double check this case. It should already be handled now with the expanded url
-// 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected)
+//// 1. exclude notAvailableItems *DONE
+// 2. handle "Keep in Cart" - Double check this case. It should already be handled now with the expanded url
+// Availablility change - keeps it in the cart on backend, but doesn't look like it in frontend and when we click 'Keep in Cart' it doesnt inject brohlik button
+
+// 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected). (partially done, with window.location.reload)
+// After we reload, we need to persist the correct user for items
 
 // Long term TODOS:
 // - Calculation algorithm
 // - Totals UI
 // - Config for users
-
-// Edgecases
-//// Keep in Cart button
-// // Empty the cart
-// Not available for promotional price anymore (need to double check this one. Isn't it same as Keep in Cart?)

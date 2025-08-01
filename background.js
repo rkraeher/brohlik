@@ -55,34 +55,29 @@ function addItem(item) {
  * Update an existing item in the shopping cart.
  * @param {CartItem} item
  */
-function updateItem(item) {
+async function updateItem(item) {
   const { productId, price, quantity, productName, user } = item;
-  const defaultUser = 'JT';
-  const query = {
-    url: '*://*.rohlik.cz/*',
-  };
-
   if (!productId) return;
 
-  console.log(user, shoppingCart);
-  console.log(productName, !user && !shoppingCart[productId]?.user);
+  const defaultUser = 'JT';
+  const isNewItem = !user && !shoppingCart[productId]?.user;
 
-  // !! Try locally running the cookie-bg-picker to see if the messaging works
-  if (!user && !shoppingCart[productId]?.user) {
-    browser.tabs.query(query).then((tabs) => {
-      for (const tab of tabs) {
-        if (tab.id) {
-          browser.tabs
-            .sendMessage(tab.id, {
-              action: 'injectBrohlikButton',
-              productId,
-            })
-            .catch((err) => {
-              console.warn('Could not send message to tab', tab.id, err);
-            });
-        }
-      }
-    });
+  if (isNewItem) {
+    try {
+      const tabs = await browser.tabs.query({
+        active: true,
+        currentWindow: true,
+        url: '*://*.rohlik.cz/*',
+      });
+
+      await browser.tabs.sendMessage(tabs[0].id, {
+        action: 'injectBrohlikButton',
+        productId,
+      });
+      // message can also receive a response from the content script/message listener
+    } catch (err) {
+      console.warn('Could not send message to tab', err);
+    }
   }
 
   const updatedItem = {
@@ -103,8 +98,6 @@ function updateItem(item) {
     ...shoppingCart[productId],
     ...updatedItem,
   };
-
-  // console.log('cart update', shoppingCart);
 }
 
 /**
@@ -152,12 +145,13 @@ function interceptor(details) {
     filter.write(event.data); // pass through untouched
   };
 
-  filter.onstop = () => {
+  filter.onstop = async () => {
     const data = JSON.parse(response)?.data;
     deleteRemovedItems(data);
 
     const availableItems = getAvailableItems(data);
-    availableItems.forEach(updateItem);
+
+    for (const item of availableItems) await updateItem(item);
 
     filter.close();
   };
@@ -180,8 +174,6 @@ async function initShoppingCart() {
 
     const availableItems = getAvailableItems(data);
     availableItems.forEach(addItem);
-
-    // console.log('Shopping Cart initialised', shoppingCart);
   } catch (error) {
     console.error('Error fetching cart data:', error);
   }
@@ -198,7 +190,8 @@ browser.webRequest.onBeforeRequest.addListener(
   ['blocking']
 );
 
-browser.runtime.onMessage.addListener((message) => {
+browser.runtime.onMessage.addListener((message, sender) => {
+  console.log(message, sender);
   if (message.action === BACKGROUND_MESSAGE_ACTIONS.UPDATE_USER) {
     updateItem({
       productId: message.productId,
