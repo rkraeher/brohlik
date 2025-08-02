@@ -2,16 +2,11 @@
 /// <reference path="./browser.d.ts" />
 
 /**
- * @typedef {Object} ContentMessageActions
- * @property {string} UPDATE_USER
+ * Message Actions
+ * @type {string}
+ * const UPDATE_USER = 'UPDATE_USER';
+ * const INJECT_BROHLIK_BUTTON = 'INJECT_BROHLIK_BUTTON';
  */
-
-/**
- * @type {ContentMessageActions}
- */
-const CONTENT_MESSAGE_ACTIONS = {
-  UPDATE_USER: 'updateUser',
-};
 
 /**
  * Dispatches an update to the cart state handlers in background script.
@@ -20,7 +15,7 @@ const CONTENT_MESSAGE_ACTIONS = {
  */
 function dispatchCartUpdate(productId, user) {
   browser.runtime.sendMessage({
-    action: CONTENT_MESSAGE_ACTIONS.UPDATE_USER,
+    action: 'UPDATE_USER',
     productId,
     user,
   });
@@ -157,9 +152,7 @@ function injectBrohlikButtons() {
     if (id) uniqueProductIds.add(id);
   });
 
-  uniqueProductIds.forEach((productId) => {
-    injectButtonIntoItemRow(productId);
-  });
+  uniqueProductIds.forEach(injectButtonIntoItemRow);
 }
 
 injectBrohlikButtons();
@@ -169,15 +162,13 @@ injectBrohlikButtons();
  * @param {Object} request - The message object sent from the background script.
  * @param {string} request.action - The action identifier.
  * @param {string} [request.productId] - The product ID for which to inject the button.
- * @param {Object} sender - Information about the message sender.
- * @param {Function} sendResponse - A function to send a response back to the sender.
  */
-function handleBackgroundMessage(request, sender, sendResponse) {
-  if (request?.action === 'injectBrohlikButton' && request?.productId) {
-    console.log('Message received from background script:', request, sender);
+function handleBackgroundMessage(request) {
+  if (request?.action === 'INJECT_BROHLIK_BUTTON' && request?.productId) {
+    console.log('Message received from background script:', request);
     injectButtonIntoItemRow(request.productId);
     // TODO: Remove this reload - it clears user state and hides console logs
-    window.location.reload();
+    // window.location.reload();
   }
   // Optionally return a response:
   // return Promise.resolve({ response: 'Response from content script' });

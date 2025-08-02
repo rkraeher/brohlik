@@ -2,16 +2,11 @@
 /// <reference path="./browser.d.ts" />
 
 /**
- * @typedef {Object} BackgroundMessageActions
- * @property {string} UPDATE_USER
+ * Message Actions
+ * @type {string}
+ * const UPDATE_USER = 'UPDATE_USER';
+ * const INJECT_BROHLIK_BUTTON = 'INJECT_BROHLIK_BUTTON';
  */
-
-/**
- * @type {BackgroundMessageActions}
- */
-const BACKGROUND_MESSAGE_ACTIONS = {
-  UPDATE_USER: 'updateUser',
-};
 
 const CART_REVIEW_ENDPOINT =
   'https://www.rohlik.cz/services/frontend-service/v2/cart-review';
@@ -71,7 +66,7 @@ async function updateItem(item) {
       });
 
       await browser.tabs.sendMessage(tabs[0].id, {
-        action: 'injectBrohlikButton',
+        action: 'INJECT_BROHLIK_BUTTON',
         productId,
       });
       // message can also receive a response from the content script/message listener
@@ -190,9 +185,9 @@ browser.webRequest.onBeforeRequest.addListener(
   ['blocking']
 );
 
-browser.runtime.onMessage.addListener((message, sender) => {
-  console.log(message, sender);
-  if (message.action === BACKGROUND_MESSAGE_ACTIONS.UPDATE_USER) {
+browser.runtime.onMessage.addListener((message) => {
+  console.log(message);
+  if (message.action === 'UPDATE_USER') {
     updateItem({
       productId: message.productId,
       user: message.user,
