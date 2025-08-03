@@ -1,33 +1,16 @@
 // @ts-check
 /// <reference path="./browser.d.ts" />
-
-/**
- * Message Actions
- * @type {string}
- * const UPDATE_USER = 'UPDATE_USER';
- * const INJECT_BROHLIK_BUTTON = 'INJECT_BROHLIK_BUTTON';
- */
+/// <reference path="./types.d.ts" />
 
 const CART_REVIEW_ENDPOINT =
   'https://www.rohlik.cz/services/frontend-service/v2/cart-review';
 
 /**
- * @typedef {Object} CartItem
- * @property {string} [user]
- * @property {number} [price]
- * @property {number} [quantity]
- * @property {string} [productName]
- * @property {number} [productId]
+ * Background script state store
+ * @type ShoppingCart
  */
-
-/**
- * @typedef {Object} CartData
- * @property {Object.<number, CartItem>} items
- * @property {Array<CartItem>} notAvailableItems
- */
-
-/** @type {Record<number, CartItem>} */
 const shoppingCart = {};
+
 /**
  * Add a new item to the shopping cart.
  * @param {CartItem} item
@@ -51,13 +34,7 @@ function addItem(item) {
  * @param {CartItem} item
  */
 async function updateItem(item) {
-  const { productId, price, quantity, productName, user } = item;
-  if (!productId) return;
-
-  const defaultUser = 'JT';
-  const isNewItem = !user && !shoppingCart[productId]?.user;
-
-  if (isNewItem) {
+  async function dispatchButtonInjection() {
     try {
       const tabs = await browser.tabs.query({
         active: true,
@@ -75,6 +52,15 @@ async function updateItem(item) {
     }
   }
 
+  const { productId, price, quantity, productName, user } = item;
+  if (!productId) return;
+
+  const defaultUser = 'JT';
+  const isNewItem = !user && !shoppingCart[productId]?.user;
+
+  if (isNewItem) await dispatchButtonInjection();
+
+  /** @type CartItem */
   const updatedItem = {
     user: user || shoppingCart[productId]?.user || defaultUser,
     price,
@@ -114,7 +100,6 @@ function deleteRemovedItems(data) {
  * @param {CartData} data
  * @return {Array<CartItem>}
  */
-
 function getAvailableItems(data) {
   const notAvailableItemIds = new Set(
     data?.notAvailableItems.map((item) => item.productId)
@@ -134,7 +119,9 @@ function interceptor(details) {
   let decoder = new TextDecoder('utf-8');
   let response = '';
 
-  filter.ondata = (event) => {
+  filter.ondata = (
+    /** @type {{ data: AllowSharedBufferSource | undefined; }} */ event
+  ) => {
     let chunk = decoder.decode(event.data, { stream: true });
     response += chunk;
     filter.write(event.data); // pass through untouched
@@ -155,17 +142,8 @@ function interceptor(details) {
 async function initShoppingCart() {
   try {
     const response = await fetch(`${CART_REVIEW_ENDPOINT}/check-cart`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
     /** @type {{ data: CartData }} */
     const { data } = await response.json();
-
-    if (!data?.items || Object.keys(data.items).length === 0) {
-      console.warn('Shopping cart is empty or unavailable.');
-      return;
-    }
 
     const availableItems = getAvailableItems(data);
     availableItems.forEach(addItem);
@@ -185,12 +163,24 @@ browser.webRequest.onBeforeRequest.addListener(
   ['blocking']
 );
 
-browser.runtime.onMessage.addListener((message) => {
+/**
+ * Handles messages sent from the content script and performs actions
+ * @param {{ action: MessageAction, productId?: number, user?: string }} message
+ */
+function handleContentMessage(message) {
   console.log(message);
-  if (message.action === 'UPDATE_USER') {
+  if (message.action === 'UPDATE_USER' && message?.productId && message?.user) {
     updateItem({
       productId: message.productId,
       user: message.user,
     });
+  }
+}
+
+browser.runtime.onMessage.addListener((message) => {
+  try {
+    handleContentMessage(message);
+  } catch (err) {
+    console.error('Error handling content message:', err, message);
   }
 });

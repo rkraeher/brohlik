@@ -1,12 +1,6 @@
 // @ts-check
 /// <reference path="./browser.d.ts" />
-
-/**
- * Message Actions
- * @type {string}
- * const UPDATE_USER = 'UPDATE_USER';
- * const INJECT_BROHLIK_BUTTON = 'INJECT_BROHLIK_BUTTON';
- */
+/// <reference path="./types.d.ts" />
 
 /**
  * Dispatches an update to the cart state handlers in background script.
@@ -23,7 +17,7 @@ function dispatchCartUpdate(productId, user) {
 
 /**
  * Creates a button that toggles between users. Includes a click handler that dispatches the updated user to the cart.
- * @param {string} productId - The ID of the product to associate with the button.
+ * @param {string} productId - The id of the product to associate with the button.
  * @returns {HTMLButtonElement}
  */
 function createBrohlikButton(productId) {
@@ -52,8 +46,8 @@ function createBrohlikButton(productId) {
 }
 
 /**
- * Finds the next sibling container that matches the selector.
  * Helper for getting DOM elements we need for positioning injected brohlik button
+ * Finds the next sibling container that matches the selector.
  * @param {HTMLElement} reference - The reference element to search from.
  * @param {string} selector - The CSS selector to match sibling elements.
  * @returns {HTMLElement | null}
@@ -111,7 +105,7 @@ function findCounterContainer(productId) {
 
 /**
  * Injects the toggle button for a specific item row.
- * @param {string} productId - The product ID to inject a button for.
+ * @param {string} productId - The productId to inject a button for.
  * @returns {void}
  */
 function injectButtonIntoItemRow(productId) {
@@ -137,7 +131,7 @@ function injectButtonIntoItemRow(productId) {
 }
 
 /**
- * Finds all unique product IDs in the UI cart and injects buttons for each.
+ * Finds all unique productIds in the website cart and injects buttons for each.
  * @returns {void}
  */
 function injectBrohlikButtons() {
@@ -155,26 +149,36 @@ function injectBrohlikButtons() {
   uniqueProductIds.forEach(injectButtonIntoItemRow);
 }
 
-injectBrohlikButtons();
-
 /**
  * Handles messages sent from the background script and performs actions
- * @param {Object} request - The message object sent from the background script.
- * @param {string} request.action - The action identifier.
- * @param {string} [request.productId] - The product ID for which to inject the button.
+ * @param {{ action: MessageAction, productId?: string }} message
  */
-function handleBackgroundMessage(request) {
-  if (request?.action === 'INJECT_BROHLIK_BUTTON' && request?.productId) {
-    console.log('Message received from background script:', request);
-    injectButtonIntoItemRow(request.productId);
-    // TODO: Remove this reload - it clears user state and hides console logs
+function handleBackgroundMessage(message) {
+  if (message?.action === 'INJECT_BROHLIK_BUTTON' && message?.productId) {
+    console.log('Message received from background script:', message);
+    injectButtonIntoItemRow(message.productId);
     // window.location.reload();
+    // TODO: Remove this reload - it clears user state and hides console logs
+    // PossibleSolution: Add a MutationObserver to watch for changes and call injectButtonIntoItemRow() for new product IDs. That way, you don’t rely on background messages or reloads for updates.
   }
   // Optionally return a response:
   // return Promise.resolve({ response: 'Response from content script' });
 }
 
-browser.runtime.onMessage.addListener(handleBackgroundMessage);
+/** Inject buttons for all items currently in the cart */
+try {
+  injectBrohlikButtons();
+} catch (err) {
+  console.error('Failed to inject buttons:', err);
+}
+
+browser.runtime.onMessage.addListener((message) => {
+  try {
+    handleBackgroundMessage(message);
+  } catch (err) {
+    console.error('Error handling background message:', err, message);
+  }
+});
 
 // Immediate TODOS:
 //// 1. exclude notAvailableItems *DONE
@@ -182,9 +186,9 @@ browser.runtime.onMessage.addListener(handleBackgroundMessage);
 // Availablility change - keeps it in the cart on backend, but doesn't look like it in frontend and when we click 'Keep in Cart' it doesnt inject brohlik button
 
 // 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected). (partially done, with window.location.reload)
-// After we reload, we need to persist the correct user for items
+// After/If we reload, we still need to persist the correct user for items
 
-// Long term TODOS:
+// Other TODOS:
 // - Calculation algorithm
 // - Totals UI
 // - Config for users
