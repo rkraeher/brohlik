@@ -29,6 +29,14 @@ function calculateTotals() {
   return totals;
 }
 
+async function getActiveTab() {
+  return await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+    url: '*://*.rohlik.cz/*',
+  });
+}
+
 /**
  * Add a new item to the shopping cart.
  * @param {CartItem} item
@@ -144,7 +152,7 @@ function interceptor(details) {
 
     for (const item of availableItems) await updateItem(item);
     Object.assign(totals, calculateTotals());
-    //TODO: send a message with the totals
+
     filter.close();
   };
 }
@@ -159,8 +167,6 @@ async function initShoppingCart() {
     availableItems.forEach(addItem);
     Object.assign(totals, calculateTotals());
 
-    //TODO: send message to content w/totals
-
     const tabs = await getActiveTab();
     await browser.tabs.sendMessage(tabs[0].id, {
       action: 'INJECT_ALL_BROHLIK_BUTTONS',
@@ -171,6 +177,7 @@ async function initShoppingCart() {
 }
 
 browser.tabs.onUpdated.addListener(initShoppingCart);
+browser.tabs.onUpdated.addListener((tabId) => browser.pageAction.show(tabId)); // clicking address bar icon opens the popup
 
 browser.webRequest.onBeforeRequest.addListener(
   interceptor,
@@ -180,14 +187,6 @@ browser.webRequest.onBeforeRequest.addListener(
   },
   ['blocking']
 );
-
-async function getActiveTab() {
-  return await browser.tabs.query({
-    active: true,
-    currentWindow: true,
-    url: '*://*.rohlik.cz/*',
-  });
-}
 
 /**
  * Handles messages sent from the content script and performs actions
@@ -202,7 +201,6 @@ function handleContentMessage(message) {
     });
 
     Object.assign(totals, calculateTotals());
-    //TODO: the message response can be the totals
   }
 }
 

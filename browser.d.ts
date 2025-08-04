@@ -6,6 +6,9 @@
 export {};
 declare global {
   const browser: {
+    pageAction: {
+      show: (tabId: number) => Promise<void>;
+    };
     runtime: {
       onMessage: {
         addListener: (

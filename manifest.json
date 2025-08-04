@@ -19,6 +19,11 @@
   "background": {
     "scripts": ["background.js"]
   },
+  "page_action": {
+    "default_title": "Brohlik",
+    "default_popup": "popup.html",
+    "default_icon": "icons/croisant-icon-48.png"
+  },
   "permissions": [
     "activeTab",
     "tabs",

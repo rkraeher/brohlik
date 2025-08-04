@@ -3,19 +3,6 @@
 /// <reference path="./types.d.ts" />
 
 /**
- * Dispatches an update to the cart state handlers in background script.
- * @param {string} productId
- * @param {string} user
- */
-function dispatchCartUpdate(productId, user) {
-  browser.runtime.sendMessage({
-    action: 'UPDATE_USER',
-    productId,
-    user,
-  });
-}
-
-/**
  * Creates a button that toggles between users. Includes a click handler that dispatches the updated user to the cart.
  * @param {string} productId - The id of the product to associate with the button.
  * @returns {HTMLButtonElement}
@@ -150,6 +137,19 @@ function injectAllBrohlikButtons() {
 }
 
 /**
+ * Dispatches an update to the cart state handlers in background script.
+ * @param {string} productId
+ * @param {string} user
+ */
+function dispatchCartUpdate(productId, user) {
+  browser.runtime.sendMessage({
+    action: 'UPDATE_USER',
+    productId,
+    user,
+  });
+}
+
+/**
  * Handles messages sent from the background script and performs actions
  * @param {{ action: MessageAction, productId?: string }} message
  */
@@ -181,20 +181,12 @@ browser.runtime.onMessage.addListener((message) => {
   }
 });
 
-// TODO:Display the totals in UI or in a popup
-
 // Immediate TODOS:
-//// 1. exclude notAvailableItems *DONE
-// 2. handle "Keep in Cart" - Double check this case.
+// 1. handle "Keep in Cart" - Double check this case.
 // Availablility change - keeps it in the cart on backend, but doesn't look like it in frontend and when we click 'Keep in Cart' it doesnt inject brohlik button
 
-// // 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected). (partially done, with window.location.reload)
-// After/If we reload, we still need to persist the correct user for items
-
-// Should normalise productId as ALWAYS a string (it can be a number when coming from rohlik api)
-
-// Other TODOS:
-//// - Calculation algorithm
-// - Totals UI
-// - Config for users
-// - Add tests
+// 2. We may want to implement some localStorage so they can navigate away and back to cart
+// 3. Should normalise productId as ALWAYS a string (it can be a number when coming from rohlik api)
+// 4. Config for users
+// 5. Add tests
+// 6. As per the mozilla extension-workshop security recommendations, we should replace the native button implementation with iframes: https://extensionworkshop.com/documentation/develop/build-a-secure-extension/
