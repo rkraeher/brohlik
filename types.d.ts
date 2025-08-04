@@ -1,6 +1,9 @@
 // types.d.ts
 
-type MessageAction = 'UPDATE_USER' | 'INJECT_BROHLIK_BUTTON';
+type MessageAction =
+  | 'UPDATE_USER'
+  | 'INJECT_BROHLIK_BUTTON'
+  | 'INJECT_ALL_BROHLIK_BUTTONS';
 
 interface CartItem {
   user?: string;
@@ -16,3 +19,4 @@ interface CartData {
 }
 
 type ShoppingCart = Record<number, CartItem>;
+type Totals = Record<string, number>;

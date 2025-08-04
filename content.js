@@ -108,7 +108,7 @@ function findCounterContainer(productId) {
  * @param {string} productId - The productId to inject a button for.
  * @returns {void}
  */
-function injectButtonIntoItemRow(productId) {
+function injectBrohlikButton(productId) {
   const counterContainer = findCounterContainer(productId);
   if (!counterContainer || !(counterContainer instanceof HTMLElement)) return;
 
@@ -134,7 +134,7 @@ function injectButtonIntoItemRow(productId) {
  * Finds all unique productIds in the website cart and injects buttons for each.
  * @returns {void}
  */
-function injectBrohlikButtons() {
+function injectAllBrohlikButtons() {
   const productIdElements = document.querySelectorAll(
     '[data-test="counter"] [data-product-id]'
   );
@@ -146,7 +146,7 @@ function injectBrohlikButtons() {
     if (id) uniqueProductIds.add(id);
   });
 
-  uniqueProductIds.forEach(injectButtonIntoItemRow);
+  uniqueProductIds.forEach(injectBrohlikButton);
 }
 
 /**
@@ -154,22 +154,23 @@ function injectBrohlikButtons() {
  * @param {{ action: MessageAction, productId?: string }} message
  */
 function handleBackgroundMessage(message) {
-  if (message?.action === 'INJECT_BROHLIK_BUTTON' && message?.productId) {
-    console.log('Message received from background script:', message);
-    injectButtonIntoItemRow(message.productId);
-    // window.location.reload();
-    // TODO: Remove this reload - it clears user state and hides console logs
-    // PossibleSolution: Add a MutationObserver to watch for changes and call injectButtonIntoItemRow() for new product IDs. That way, you don’t rely on background messages or reloads for updates.
-  }
-  // Optionally return a response:
-  // return Promise.resolve({ response: 'Response from content script' });
-}
+  if (!message?.action) return;
 
-/** Inject buttons for all items currently in the cart */
-try {
-  injectBrohlikButtons();
-} catch (err) {
-  console.error('Failed to inject buttons:', err);
+  switch (message.action) {
+    case 'INJECT_ALL_BROHLIK_BUTTONS':
+      setTimeout(injectAllBrohlikButtons, 2000);
+      break;
+
+    case 'INJECT_BROHLIK_BUTTON':
+      setTimeout(
+        () => message.productId && injectBrohlikButton(message.productId),
+        2000
+      );
+      break;
+
+    default:
+      console.warn('Unknown message action:', message.action);
+  }
 }
 
 browser.runtime.onMessage.addListener((message) => {
@@ -180,15 +181,20 @@ browser.runtime.onMessage.addListener((message) => {
   }
 });
 
+// TODO:Display the totals in UI or in a popup
+
 // Immediate TODOS:
 //// 1. exclude notAvailableItems *DONE
-// 2. handle "Keep in Cart" - Double check this case. It should already be handled now with the expanded url
+// 2. handle "Keep in Cart" - Double check this case.
 // Availablility change - keeps it in the cart on backend, but doesn't look like it in frontend and when we click 'Keep in Cart' it doesnt inject brohlik button
 
-// 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected). (partially done, with window.location.reload)
+// // 3. handle when some other new item is added (some endpoint is called, brohlik button is not injected). (partially done, with window.location.reload)
 // After/If we reload, we still need to persist the correct user for items
 
+// Should normalise productId as ALWAYS a string (it can be a number when coming from rohlik api)
+
 // Other TODOS:
-// - Calculation algorithm
+//// - Calculation algorithm
 // - Totals UI
 // - Config for users
+// - Add tests

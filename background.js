@@ -12,6 +12,24 @@ const CART_REVIEW_ENDPOINT =
 const shoppingCart = {};
 
 /**
+ * Holds the calculated total costs for all the users
+ * @type Totals
+ */
+let totals = {};
+
+// doesn't include items left in keep in cart section, but the website DOES include them in the total
+// this total reflects ONLY the cost of the items, not tip nor the 'to be calculated' delivery fee
+function calculateTotals() {
+  const totals = { JT: 0, RK: 0, Shared: 0 };
+  for (const item of Object.values(shoppingCart)) {
+    if (item.price && item.quantity) {
+      totals[item.user] = (totals[item.user] || 0) + item.price * item.quantity;
+    }
+  }
+  return totals;
+}
+
+/**
  * Add a new item to the shopping cart.
  * @param {CartItem} item
  */
@@ -34,31 +52,22 @@ function addItem(item) {
  * @param {CartItem} item
  */
 async function updateItem(item) {
-  async function dispatchButtonInjection() {
-    try {
-      const tabs = await browser.tabs.query({
-        active: true,
-        currentWindow: true,
-        url: '*://*.rohlik.cz/*',
-      });
-
-      await browser.tabs.sendMessage(tabs[0].id, {
-        action: 'INJECT_BROHLIK_BUTTON',
-        productId,
-      });
-      // message can also receive a response from the content script/message listener
-    } catch (err) {
-      console.warn('Could not send message to tab', err);
-    }
-  }
-
   const { productId, price, quantity, productName, user } = item;
   if (!productId) return;
 
   const defaultUser = 'JT';
   const isNewItem = !user && !shoppingCart[productId]?.user;
 
-  if (isNewItem) await dispatchButtonInjection();
+  if (isNewItem)
+    try {
+      const tabs = await getActiveTab();
+      await browser.tabs.sendMessage(tabs[0].id, {
+        action: 'INJECT_BROHLIK_BUTTON',
+        productId,
+      });
+    } catch (err) {
+      console.warn('Could not send message to tab', err);
+    }
 
   /** @type CartItem */
   const updatedItem = {
@@ -124,7 +133,7 @@ function interceptor(details) {
   ) => {
     let chunk = decoder.decode(event.data, { stream: true });
     response += chunk;
-    filter.write(event.data); // pass through untouched
+    filter.write(event.data); // pass the original request data through to the api untouched
   };
 
   filter.onstop = async () => {
@@ -134,7 +143,8 @@ function interceptor(details) {
     const availableItems = getAvailableItems(data);
 
     for (const item of availableItems) await updateItem(item);
-
+    Object.assign(totals, calculateTotals());
+    //TODO: send a message with the totals
     filter.close();
   };
 }
@@ -147,6 +157,14 @@ async function initShoppingCart() {
 
     const availableItems = getAvailableItems(data);
     availableItems.forEach(addItem);
+    Object.assign(totals, calculateTotals());
+
+    //TODO: send message to content w/totals
+
+    const tabs = await getActiveTab();
+    await browser.tabs.sendMessage(tabs[0].id, {
+      action: 'INJECT_ALL_BROHLIK_BUTTONS',
+    });
   } catch (error) {
     console.error('Error fetching cart data:', error);
   }
@@ -163,6 +181,14 @@ browser.webRequest.onBeforeRequest.addListener(
   ['blocking']
 );
 
+async function getActiveTab() {
+  return await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+    url: '*://*.rohlik.cz/*',
+  });
+}
+
 /**
  * Handles messages sent from the content script and performs actions
  * @param {{ action: MessageAction, productId?: number, user?: string }} message
@@ -174,6 +200,9 @@ function handleContentMessage(message) {
       productId: message.productId,
       user: message.user,
     });
+
+    Object.assign(totals, calculateTotals());
+    //TODO: the message response can be the totals
   }
 }
 
