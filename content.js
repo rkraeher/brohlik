@@ -181,12 +181,17 @@ browser.runtime.onMessage.addListener((message) => {
   }
 });
 
-// Immediate TODOS:
-// 1. handle "Keep in Cart" - Double check this case.
-// Availablility change - keeps it in the cart on backend, but doesn't look like it in frontend and when we click 'Keep in Cart' it doesnt inject brohlik button
+// TODOS:
+// 1. handle "Keep in Cart" and "Availability" price change section
+// Items in this section seem to be added to the frontend displayed cart total,
+// making the total displayed there and in brohlik popup different
 
-// 2. We may want to implement some localStorage so they can navigate away and back to cart
-// 3. Should normalise productId as ALWAYS a string (it can be a number when coming from rohlik api)
-// 4. Config for users
-// 5. Add tests
-// 6. As per the mozilla extension-workshop security recommendations, we should replace the native button implementation with iframes: https://extensionworkshop.com/documentation/develop/build-a-secure-extension/
+// 2. Add tests (jest, https://lusito.github.io/mockzilla-webextension/)
+// 3. Implement persistent user-item assignment state
+// 4. Config for users (number of users and their names)
+// 5. Mozilla extension-workshop security recommends to use iframes, not native buttons : https://extensionworkshop.com/documentation/develop/build-a-secure-extension/
+// 6. bundling/rollup.js to prep for publication and refactors to separate modules (and swap to ts)
+// 7. publish for firefox
+// 8. add multi-browser support
+
+// * Should normalise productId as ALWAYS a string (it can be a number when coming from rohlik api)*
